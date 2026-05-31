@@ -1,0 +1,32 @@
+{
+  "width": 1080,
+  "height": 1920,
+  "fps": 24,
+  "codec": "libx264",
+  "preset": "medium",
+  "crf": 23,
+  "ken_burns": {
+    "enabled": true,
+    "zoom_start": 1.0,
+    "zoom_end": 1.15,
+    "pan": "center"
+  },
+  "transition": {
+    "enabled": false,
+    "type": "fade",
+    "duration_sec": 0.5
+  },
+  "subtitle": {
+    "font_name": "Microsoft YaHei",
+    "font_size": 48,
+    "primary_color": "&H00FFFFFF",
+    "outline_color": "&H00000000",
+    "outline": 2,
+    "margin_v": 80
+  },
+  "bgm": {
+    "enabled": false,
+    "path": "",
+    "volume": 0.2
+  }
+}

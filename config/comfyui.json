@@ -1,0 +1,13 @@
+{
+  "host": "${COMFYUI_HOST}",
+  "workflow_path": "workflows/ipadapter_scene.json",
+  "mock": true,
+  "poll_interval_sec": 2,
+  "poll_timeout_sec": 300,
+  "input_mappings": {
+    "positive_prompt": ["6", "inputs", "text"],
+    "negative_prompt": ["7", "inputs", "text"],
+    "reference_image": ["15", "inputs", "image"]
+  },
+  "default_negative": "low quality, blurry, distorted, watermark, text"
+}

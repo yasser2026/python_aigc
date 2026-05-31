@@ -1,0 +1,29 @@
+{
+  "max_scenes_per_chapter": 12,
+  "scene_duration_sec": 4,
+  "aspect_ratio": "9:16",
+  "character_consistency": {
+    "method": "ipadapter",
+    "reference_image_dir": "data/characters"
+  },
+  "motion": {
+    "mode": "ken_burns",
+    "i2v_provider": null
+  },
+  "stages": [
+    "parse_scenes",
+    "generate_images",
+    "tts",
+    "motion_clips",
+    "subtitles",
+    "assemble"
+  ],
+  "retry": {
+    "llm": 2,
+    "comfyui": 1,
+    "ffmpeg": 1
+  },
+  "quality_filter": {
+    "enabled": false
+  }
+}
