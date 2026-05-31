@@ -1,0 +1,113 @@
+{
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "林雷",
+      "appearance": "A young boy, 6 years old, short black hair, wearing simple linen clothes and wooden sandals, serious expression",
+      "ref_image": null
+    },
+    {
+      "id": "char_2",
+      "name": "Trainer A",
+      "appearance": "Middle-aged man, muscular build, bald head, wearing a sleeveless vest and coarse cotton pants, standing firmly",
+      "ref_image": null
+    },
+    {
+      "id": "char_3",
+      "name": "Trainer B",
+      "appearance": "Middle-aged man, strong physique, dark skin, wearing a brown sleeveless top and loose training pants",
+      "ref_image": null
+    },
+    {
+      "id": "char_4",
+      "name": "Trainer C",
+      "appearance": "Muscular middle-aged man with a scar on his arm, wearing a gray vest and cloth trousers",
+      "ref_image": null
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "narration": "乌山镇，坐落于魔兽山脉以西，清晨的阳光洒在宁静的小镇上。",
+      "visual_prompt": "Wide aerial shot of a small ancient town surrounded by mountains at sunrise, golden light spreading over tiled roofs and dusty roads, misty atmosphere, fantasy style",
+      "character_ids": [],
+      "shot_type": "wide",
+      "duration_sec": 6.528,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_1.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_1.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_1.mp4"
+    },
+    {
+      "id": "scene_2",
+      "narration": "朝阳初升，小镇居民已开始一天的劳作，孩童们也纷纷起身晨练。",
+      "visual_prompt": "Medium shot of townspeople walking on dirt paths, carrying tools, children in simple clothes running toward an open field, soft morning light with long shadows",
+      "character_ids": [],
+      "shot_type": "medium",
+      "duration_sec": 6.552,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_2.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_2.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_2.mp4"
+    },
+    {
+      "id": "scene_3",
+      "narration": "东边空地上，温热阳光透过大树洒下斑驳光点，映照着一群肃立的孩子。",
+      "visual_prompt": "Low-angle wide shot of a large training ground under dappled sunlight from tall trees, hundreds of children standing in formation, silence in the air, cinematic lighting",
+      "character_ids": [],
+      "shot_type": "wide",
+      "duration_sec": 7.296,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_3.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_3.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_3.mp4"
+    },
+    {
+      "id": "scene_4",
+      "narration": "孩子们按年龄分为三组，最小的六到八岁，神情认真而稚嫩。",
+      "visual_prompt": "Close-up side view of the northern group of young children, ages 6-8, standing straight, some trembling with effort, early sun highlighting their faces",
+      "character_ids": [
+        "char_1"
+      ],
+      "shot_type": "closeup",
+      "duration_sec": 6.168,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_4.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_4.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_4.mp4"
+    },
+    {
+      "id": "scene_5",
+      "narration": "中间是九到十二岁的少年，站姿挺拔，眼神中透出坚毅。",
+      "visual_prompt": "Medium tracking shot across the middle row of older kids, focused expressions, sweat on brows, wearing basic training outfits, morning breeze rustling clothes",
+      "character_ids": [],
+      "shot_type": "medium",
+      "duration_sec": 5.64,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_5.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_5.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_5.mp4"
+    },
+    {
+      "id": "scene_6",
+      "narration": "最南边是十三到十六岁的少年，体格健壮，充满青春的力量。",
+      "visual_prompt": "Low-angle wide shot of the southern team of teenagers, muscular builds, standing like soldiers, strong backlight from sunrise creating heroic silhouettes",
+      "character_ids": [],
+      "shot_type": "wide",
+      "duration_sec": 6.168,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_6.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_6.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_6.mp4"
+    },
+    {
+      "id": "scene_7",
+      "narration": "三位壮硕教头站在前方，短背心粗布裤，气势威严。",
+      "visual_prompt": "Frontal medium shot of three muscular trainers standing in a line, arms crossed, wearing sleeveless vests and cotton pants, stern expressions, sun behind them",
+      "character_ids": [
+        "char_2",
+        "char_3",
+        "char_4"
+      ],
+      "shot_type": "medium",
+      "duration_sec": 5.424,
+      "image_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\images\\scene_7.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\audio\\scene_7.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\9f66d69e-1652-44f4-b604-e3fbc183f258\\clips\\scene_7.mp4"
+    }
+  ]
+}

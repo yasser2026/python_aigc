@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "uri": "http://127.0.0.1:19530",
+  "collection": "aigc_novel_entities",
+  "dimension": 1024,
+  "embedding_model": "text-embedding-v3",
+  "embedding_base_url": "https://dashscope.aliyuncs.com/api/v1",
+  "api_key": "${DASHSCOPE_API_KEY}",
+  "similarity_threshold": 0.72,
+  "search_top_k": 3,
+  "fallback_to_json": true
+}

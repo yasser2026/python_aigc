@@ -1,0 +1,39 @@
+:root {
+  --bg: #f4f6fb;
+  --sidebar: #eef1f8;
+  --card: #ffffff;
+  --primary: #6b7cff;
+  --primary-hover: #5568f0;
+  --text: #1a1d26;
+  --muted: #6b7280;
+  --border: #e5e8f0;
+  --user-bubble: #f0f2f8;
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(90, 100, 140, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Noto Sans SC", system-ui, sans-serif;
+  background: linear-gradient(160deg, #f8f9ff 0%, #eef2ff 50%, #f4f6fb 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-family: inherit;
+}

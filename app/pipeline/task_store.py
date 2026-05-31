@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -13,7 +12,8 @@ from app.core.schemas import ProjectArtifacts, ProjectStatus
 @dataclass
 class ProjectRecord:
     project_id: str
-    title: str
+    novel_name: str
+    episode: int
     text: str
     status: ProjectStatus = ProjectStatus.PENDING
     progress: float = 0.0
@@ -29,17 +29,25 @@ class TaskStore:
         self._lock = threading.Lock()
         self._projects: dict[str, ProjectRecord] = {}
 
-    def create(self, title: str, text: str, work_dir: str, overrides: dict | None = None) -> ProjectRecord:
-        pid = str(uuid.uuid4())
+    def create(
+        self,
+        project_id: str,
+        novel_name: str,
+        episode: int,
+        text: str,
+        work_dir: str,
+        overrides: dict | None = None,
+    ) -> ProjectRecord:
         record = ProjectRecord(
-            project_id=pid,
-            title=title,
+            project_id=project_id,
+            novel_name=novel_name,
+            episode=episode,
             text=text,
             work_dir=work_dir,
             config_overrides=overrides or {},
         )
         with self._lock:
-            self._projects[pid] = record
+            self._projects[project_id] = record
         return record
 
     def get(self, project_id: str) -> ProjectRecord | None:

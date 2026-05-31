@@ -1,7 +1,13 @@
 {
   "host": "0.0.0.0",
-  "port": 8000,
+  "port": 8091,
   "data_root": "data",
   "max_concurrent_projects": 2,
-  "config_dir": "config"
+  "config_dir": "config",
+  "image_provider": "qwen",
+  "mock_image": {
+    "font_path": "C:/Windows/Fonts/msyh.ttc",
+    "title_font_size": 40,
+    "body_font_size": 56
+  }
 }

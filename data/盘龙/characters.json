@@ -1,0 +1,14 @@
+{
+  "char_1": {
+    "id": "char_1",
+    "name": "希尔曼",
+    "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+    "ref_image": "D:\\code\\python\\python_agic\\data\\盘龙\\characters\\char_1\\ref.png"
+  },
+  "char_2": {
+    "id": "char_2",
+    "name": "哈德利",
+    "appearance": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
+    "ref_image": "D:\\code\\python\\python_agic\\data\\盘龙\\characters\\char_2\\ref.png"
+  }
+}

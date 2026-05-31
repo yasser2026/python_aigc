@@ -1,0 +1,153 @@
+# 小说转短视频 AIGC — 生产部署（aigc.lawaibot.com.cn）
+
+服务器公网 IP：47.88.94.155（与 DNS 解析一致）
+域名：aigc.lawaibot.com.cn → A 记录指向上述 IP（阿里云 DNS 已配置主机记录 aigc）
+
+架构：
+  用户 → HTTPS 443（Nginx）→ 静态页 aigc_front/dist
+                      └→ /api/* 反代 → 本机 8091（FastAPI / Uvicorn）
+
+================================================================================
+一、服务器环境准备（Linux，以 CentOS/Ubuntu 为例）
+================================================================================
+
+1. 安装依赖
+   sudo yum install -y nginx git ffmpeg   # 或 apt install nginx git ffmpeg
+   # FFmpeg 需能在 PATH 中执行：ffmpeg -version
+
+2. 代码目录（与 nginx.conf 中 root 一致）
+   sudo mkdir -p /root/code
+   cd /root/code
+   git clone <你的仓库地址> python_agic
+   cd python_agic
+
+3. Python 虚拟环境
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+
+4. 环境变量
+   cp .env.example .env
+   vim .env
+   # 必填：DASHSCOPE_API_KEY=sk-xxx
+   # 可选：COMFYUI_HOST=http://127.0.0.1:8188
+
+5. 确认后端端口（config/app.json）
+   "port": 8091
+
+6. （可选）Milvus 向量库
+   docker run -d --name milvus -p 19530:19530 milvusdb/milvus:latest
+   # config/milvus.json 中 enabled: true，uri: http://127.0.0.1:19530
+
+================================================================================
+二、构建前端
+================================================================================
+
+cd /root/code/python_agic/aigc_front
+npm install
+npm run build
+# 产物：/root/code/python_agic/aigc_front/dist
+
+生产环境 API 走同源 /api，无需改 .env（默认 VITE_API_BASE=/api）。
+
+================================================================================
+三、HTTPS 证书（Let's Encrypt，与 www/coder 共用证书时扩域）
+================================================================================
+
+# 首次或仅为 aigc 单独申请：
+# sudo certbot certonly --nginx -d aigc.lawaibot.com.cn
+
+# 已有 www.lawaibot.com.cn 证书，增加 aigc 子域（推荐）：
+sudo certbot certonly --nginx \
+  -d www.lawaibot.com.cn \
+  -d coder.lawaibot.com.cn \
+  -d aigc.lawaibot.com.cn \
+  --expand
+
+证书路径（nginx.conf 已引用）：
+  /etc/letsencrypt/live/www.lawaibot.com.cn/fullchain.pem
+  /etc/letsencrypt/live/www.lawaibot.com.cn/privkey.pem
+
+续期：sudo certbot renew --dry-run
+
+================================================================================
+四、Nginx
+================================================================================
+
+sudo cp /root/code/python_agic/nginx.conf /etc/nginx/nginx.conf
+sudo nginx -t
+sudo systemctl reload nginx
+# 或：sudo systemctl restart nginx
+
+验证：
+  curl -I https://aigc.lawaibot.com.cn
+  curl https://aigc.lawaibot.com.cn/api/health
+
+================================================================================
+五、后端常驻（systemd 示例）
+================================================================================
+
+sudo tee /etc/systemd/system/aigc-api.service << 'EOF'
+[Unit]
+Description=Novel AIGC FastAPI
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/code/python_agic
+Environment=PATH=/root/code/python_agic/.venv/bin
+ExecStart=/root/code/python_agic/.venv/bin/python run.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable aigc-api
+sudo systemctl start aigc-api
+sudo systemctl status aigc-api
+
+本机检查：
+  curl http://127.0.0.1:8091/health
+
+================================================================================
+六、防火墙 / 安全组
+================================================================================
+
+云厂商安全组放行：80、443（公网）
+8091 仅本机访问，不要对公网开放。
+
+================================================================================
+七、更新发布流程
+================================================================================
+
+cd /root/code/python_agic
+git pull
+source .venv/bin/activate
+pip install -r requirements.txt
+
+cd aigc_front && npm install && npm run build
+
+sudo systemctl restart aigc-api
+sudo nginx -t && sudo systemctl reload nginx
+
+================================================================================
+八、常见问题
+================================================================================
+
+1. 页面能开但接口 502
+   → systemctl status aigc-api，确认 8091 在监听：ss -lntp | grep 8091
+
+2. 证书浏览器不信任
+   → certbot 是否包含 aigc.lawaibot.com.cn；DNS 是否已生效
+
+3. 生成视频很慢 / 超时
+   → nginx 已设 proxy_read_timeout 3600s；勿缩短
+
+4. FFmpeg 不可用
+   → which ffmpeg；/health 返回 ffmpeg: true
+
+访问地址：https://aigc.lawaibot.com.cn

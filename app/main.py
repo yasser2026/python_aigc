@@ -6,8 +6,9 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import projects
+from app.api import portfolio, projects
 from app.core.config_loader import get_root, load_config
 
 
@@ -25,7 +26,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(projects.router, prefix="/projects", tags=["projects"])
+app.include_router(portfolio.router, prefix="/portfolio", tags=["portfolio"])
 app.include_router(projects.health_router, tags=["health"])
 
 

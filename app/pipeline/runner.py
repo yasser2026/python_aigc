@@ -5,10 +5,18 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from app.core.config_loader import get_root, load_config
+from app.core.config_loader import load_config
 from app.core.schemas import ProjectArtifacts, ProjectStatus, Scene
 from app.pipeline.task_store import task_store
-from app.services import comfyui_client, ffmpeg_assemble, ffmpeg_motion, llm_scene, subtitle, tts_service
+from app.services import (
+    character_refs,
+    ffmpeg_assemble,
+    ffmpeg_motion,
+    image_provider,
+    llm_scene,
+    subtitle,
+    tts_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +37,6 @@ STAGE_PROGRESS = {
     "subtitles": (ProjectStatus.SUBTITLES, 80),
     "assemble": (ProjectStatus.ASSEMBLING, 90),
 }
-
-
-def _work_path(project_id: str) -> Path:
-    app_cfg = load_config("app")
-    root = get_root() / app_cfg.get("data_root", "data") / project_id
-    root.mkdir(parents=True, exist_ok=True)
-    return root
 
 
 def _update_stage(project_id: str, stage: str, progress: float) -> None:
@@ -65,7 +66,16 @@ async def run_pipeline(project_id: str) -> None:
 
         if "parse_scenes" in stages:
             _update_stage(project_id, "parse_scenes", 5)
-            script = await llm_scene.parse_novel_to_scenes(rec.text)
+            script = await llm_scene.parse_novel_to_scenes(rec.text, rec.novel_name)
+            script.characters = character_refs.merge_with_novel_registry(
+                rec.novel_name, script.characters
+            )
+            script.locations = character_refs.merge_locations(
+                rec.novel_name, script.locations
+            )
+            character_refs.save_registry(
+                rec.novel_name, script.characters, script.locations
+            )
             scenes_path = llm_scene.save_scene_script(work_dir, script)
             scenes = script.scenes
             _update_stage(project_id, "parse_scenes", 10)
@@ -78,14 +88,24 @@ async def run_pipeline(project_id: str) -> None:
             scenes = script.scenes
 
         characters = script.characters if script else []
+        locations = script.locations if script else []
 
         if "generate_images" in stages:
             _update_stage(project_id, "generate_images", 20)
-            scenes = await comfyui_client.generate_all_images(work_dir, characters, scenes)
+            scenes = await image_provider.generate_all_images(
+                work_dir,
+                characters,
+                scenes,
+                rec.novel_name,
+                locations=locations,
+            )
             # Persist updated paths
             script.scenes = scenes
             script.characters = characters
             llm_scene.save_scene_script(work_dir, script)
+            character_refs.save_registry(
+                rec.novel_name, characters, locations
+            )
             _update_stage(project_id, "generate_images", 30)
             task_store.update(
                 project_id,

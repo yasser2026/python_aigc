@@ -29,6 +29,7 @@ def build_scene_ass(scene: Scene, duration: float, output_path: Path) -> Path:
     sub = cfg.get("subtitle", {})
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    bold = -1 if sub.get("bold", True) else 0
     header = f"""[Script Info]
 Title: {scene.id}
 ScriptType: v4.00+
@@ -37,7 +38,7 @@ PlayResY: {cfg.get('height', 1920)}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{sub.get('font_name', 'Microsoft YaHei')},{sub.get('font_size', 48)},{sub.get('primary_color', '&H00FFFFFF')},&H000000FF,{sub.get('outline_color', '&H00000000')},&H80000000,0,0,0,0,100,100,0,0,1,{sub.get('outline', 2)},0,2,40,40,{sub.get('margin_v', 80)},1
+Style: Default,{sub.get('font_name', 'Microsoft YaHei')},{sub.get('font_size', 72)},{sub.get('primary_color', '&H00FFFFFF')},&H000000FF,{sub.get('outline_color', '&H00000000')},&H80000000,{bold},0,0,0,100,100,0,0,1,{sub.get('outline', 4)},0,2,40,40,{sub.get('margin_v', 120)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -52,6 +53,7 @@ def build_full_ass(scenes: list[Scene], durations: list[float], output_path: Pat
     sub = cfg.get("subtitle", {})
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    bold = -1 if sub.get("bold", True) else 0
     header = f"""[Script Info]
 Title: full
 ScriptType: v4.00+
@@ -60,7 +62,7 @@ PlayResY: {cfg.get('height', 1920)}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{sub.get('font_name', 'Microsoft YaHei')},{sub.get('font_size', 48)},{sub.get('primary_color', '&H00FFFFFF')},&H000000FF,{sub.get('outline_color', '&H00000000')},&H80000000,0,0,0,0,100,100,0,0,1,{sub.get('outline', 2)},0,2,40,40,{sub.get('margin_v', 80)},1
+Style: Default,{sub.get('font_name', 'Microsoft YaHei')},{sub.get('font_size', 72)},{sub.get('primary_color', '&H00FFFFFF')},&H000000FF,{sub.get('outline_color', '&H00000000')},&H80000000,{bold},0,0,0,100,100,0,0,1,{sub.get('outline', 4)},0,2,40,40,{sub.get('margin_v', 120)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

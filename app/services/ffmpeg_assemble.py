@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import shutil
 from pathlib import Path
 
 from app.core.config_loader import load_config
+
+logger = logging.getLogger(__name__)
 
 
 def ffprobe_available() -> bool:
@@ -47,10 +50,22 @@ async def burn_subtitles(
     ass_path: Path,
     output_path: Path,
 ) -> Path:
+    cfg = load_config("ffmpeg")
+    sub = cfg.get("subtitle", {})
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    # Escape path for ffmpeg filter on Windows
+
     ass_escaped = ass_path.resolve().as_posix().replace(":", "\\:")
-    vf = f"subtitles='{ass_escaped}'"
+    fonts_dir = sub.get("fonts_dir", "C:/Windows/Fonts")
+    fonts_escaped = Path(fonts_dir).resolve().as_posix().replace(":", "\\:")
+
+    font_name = sub.get("font_name", "Microsoft YaHei")
+    font_size = sub.get("font_size", 72)
+    outline = sub.get("outline", 4)
+    force = (
+        f"Fontname={font_name},Fontsize={font_size},"
+        f"Outline={outline},Bold=1,Alignment=2,MarginV={sub.get('margin_v', 120)}"
+    )
+    vf = f"subtitles='{ass_escaped}':fontsdir='{fonts_escaped}':force_style='{force}'"
 
     cmd = [
         "ffmpeg", "-y",
@@ -66,8 +81,9 @@ async def burn_subtitles(
     )
     _, stderr = await proc.communicate()
     if proc.returncode != 0:
-        # Fallback: copy without subtitles if burn fails (font missing etc.)
-        shutil.copy2(video_path, output_path)
+        err = stderr.decode(errors="replace")[-800:]
+        logger.error("Subtitle burn failed: %s", err)
+        raise RuntimeError(f"ffmpeg subtitle burn failed: {err}")
     return output_path
 
 

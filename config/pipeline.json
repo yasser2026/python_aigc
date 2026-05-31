@@ -3,8 +3,9 @@
   "scene_duration_sec": 4,
   "aspect_ratio": "9:16",
   "character_consistency": {
-    "method": "ipadapter",
-    "reference_image_dir": "data/characters"
+    "method": "ref_image",
+    "scope": "per_novel",
+    "reference_subdir": "characters"
   },
   "motion": {
     "mode": "ken_burns",

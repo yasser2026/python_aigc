@@ -18,11 +18,13 @@
   },
   "subtitle": {
     "font_name": "Microsoft YaHei",
-    "font_size": 48,
+    "font_size": 72,
     "primary_color": "&H00FFFFFF",
     "outline_color": "&H00000000",
-    "outline": 2,
-    "margin_v": 80
+    "outline": 4,
+    "margin_v": 120,
+    "bold": true,
+    "fonts_dir": "C:/Windows/Fonts"
   },
   "bgm": {
     "enabled": false,

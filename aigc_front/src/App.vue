@@ -1,0 +1,979 @@
+<script setup>
+import { computed, onMounted, ref } from "vue";
+import {
+  createProject,
+  downloadUrl,
+  fetchHealth,
+  fetchPortfolio,
+  getProject,
+  posterUrl,
+} from "./api";
+
+const STAGE_LABELS = {
+  pending: "排队中",
+  parsing: "AI 分镜",
+  imaging: "生成画面",
+  audio: "配音合成",
+  motion: "镜头动效",
+  subtitles: "生成字幕",
+  assembling: "成片合成",
+  done: "已完成",
+  failed: "失败",
+};
+
+const novelName = ref("");
+const episode = ref(1);
+const plot = ref("");
+const messages = ref([]);
+const history = ref([]);
+const projectId = ref(null);
+const status = ref(null);
+const progress = ref(0);
+const currentStage = ref("");
+const error = ref("");
+const generating = ref(false);
+const backendOk = ref(true);
+const videoUrl = ref("");
+const activeView = ref("chat");
+const portfolioItems = ref([]);
+const portfolioLoading = ref(false);
+const portfolioError = ref("");
+const selectedWork = ref(null);
+
+const canSubmit = computed(
+  () =>
+    !generating.value &&
+    novelName.value.trim() &&
+    episode.value >= 1 &&
+    plot.value.trim()
+);
+
+function loadHistory() {
+  try {
+    history.value = JSON.parse(localStorage.getItem("aigc_history") || "[]");
+  } catch {
+    history.value = [];
+  }
+}
+
+function saveHistory(item) {
+  const list = [item, ...history.value.filter((h) => h.id !== item.id)].slice(
+    0,
+    20
+  );
+  history.value = list;
+  localStorage.setItem("aigc_history", JSON.stringify(list));
+}
+
+function addMessage(role, content, extra = {}) {
+  messages.value.push({ id: Date.now() + Math.random(), role, content, ...extra });
+}
+
+function formatUserPrompt() {
+  return `《${novelName.value.trim()}》 第 ${episode.value} 集\n\n${plot.value.trim()}`;
+}
+
+async function pollUntilDone(id) {
+  const maxMs = 30 * 60 * 1000;
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    const data = await getProject(id);
+    status.value = data.status;
+    progress.value = data.progress;
+    currentStage.value = data.current_stage || data.status;
+    error.value = data.error || "";
+
+    if (data.status === "done") {
+      videoUrl.value = downloadUrl(id) + "?t=" + Date.now();
+      return data;
+    }
+    if (data.status === "failed") {
+      throw new Error(data.error || "生成失败");
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  throw new Error("生成超时，请稍后在历史记录中重试查询");
+}
+
+async function handleGenerate() {
+  if (!canSubmit.value) return;
+
+  generating.value = true;
+  videoUrl.value = "";
+  error.value = "";
+  status.value = "pending";
+  progress.value = 0;
+
+  const prompt = formatUserPrompt();
+  addMessage("user", prompt);
+
+  try {
+    const created = await createProject({
+      novel_name: novelName.value.trim(),
+      episode: Number(episode.value),
+      text: plot.value.trim(),
+    });
+
+    projectId.value = created.project_id;
+    addMessage(
+      "assistant",
+      `正在为你生成《${created.novel_name}》第 ${created.episode} 集短视频，预计需要数分钟，请稍候…\n\n当前阶段会依次进行：分镜 → 生图 → 配音 → 合成。`,
+      { loading: true }
+    );
+
+    saveHistory({
+      id: created.project_id,
+      novel_name: created.novel_name,
+      episode: created.episode,
+      time: new Date().toISOString(),
+    });
+
+    await pollUntilDone(created.project_id);
+
+    const last = messages.value[messages.value.length - 1];
+    if (last?.loading) last.loading = false;
+
+    addMessage("assistant", "你的视频生成好啦。", {
+      video: true,
+      downloadName: `${created.novel_name}_第${String(created.episode).padStart(2, "0")}集.mp4`,
+    });
+    loadPortfolio();
+  } catch (e) {
+    error.value = e.message || String(e);
+    const last = messages.value[messages.value.length - 1];
+    if (last?.loading) last.loading = false;
+    addMessage("assistant", `生成失败：${error.value}`, { error: true });
+  } finally {
+    generating.value = false;
+  }
+}
+
+function loadFromHistory(item) {
+  novelName.value = item.novel_name;
+  episode.value = item.episode;
+  projectId.value = item.id;
+}
+
+function newChat() {
+  activeView.value = "chat";
+  messages.value = [];
+  videoUrl.value = "";
+  error.value = "";
+  status.value = null;
+  progress.value = 0;
+}
+
+function formatSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatTime(iso) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("zh-CN", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
+async function loadPortfolio() {
+  portfolioLoading.value = true;
+  portfolioError.value = "";
+  try {
+    const data = await fetchPortfolio();
+    portfolioItems.value = data.items || [];
+  } catch (e) {
+    portfolioError.value = e.message || String(e);
+    portfolioItems.value = [];
+  } finally {
+    portfolioLoading.value = false;
+  }
+}
+
+function openPortfolio() {
+  activeView.value = "portfolio";
+  selectedWork.value = null;
+  loadPortfolio();
+}
+
+function openWork(item) {
+  selectedWork.value = item;
+}
+
+function closeWorkDetail() {
+  selectedWork.value = null;
+}
+
+function workVideoUrl(projectId) {
+  return downloadUrl(projectId) + "?t=" + Date.now();
+}
+
+onMounted(async () => {
+  loadHistory();
+  try {
+    await fetchHealth();
+    backendOk.value = true;
+    await loadPortfolio();
+  } catch {
+    backendOk.value = false;
+  }
+});
+</script>
+
+<template>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo">✦</span>
+        <span>短剧 AIGC</span>
+      </div>
+      <nav class="nav-tabs">
+        <button
+          type="button"
+          :class="['nav-tab', activeView === 'chat' && 'active']"
+          @click="newChat"
+        >
+          生成
+        </button>
+        <button
+          type="button"
+          :class="['nav-tab', activeView === 'portfolio' && 'active']"
+          @click="openPortfolio"
+        >
+          作品集
+        </button>
+      </nav>
+      <button class="btn-new" type="button" @click="newChat">开启新任务</button>
+
+      <div class="history-title">生成记录</div>
+      <div v-if="!history.length" class="history-empty">暂无记录，生成后会出现在这里</div>
+      <ul v-else class="history-list">
+        <li
+          v-for="h in history"
+          :key="h.id"
+          class="history-item"
+          @click="loadFromHistory(h)"
+        >
+          <div class="history-name">{{ h.novel_name }}</div>
+          <div class="history-meta">第 {{ h.episode }} 集</div>
+        </li>
+      </ul>
+
+      <div class="sidebar-foot">
+        <span :class="['dot', backendOk ? 'ok' : 'err']"></span>
+        {{ backendOk ? "后端已连接" : "后端未连接" }}
+      </div>
+    </aside>
+
+    <main class="main">
+      <section v-if="activeView === 'portfolio'" class="portfolio">
+        <header class="portfolio-header">
+          <h1>作品集</h1>
+          <p>已完成的成片会出现在这里，可直接预览与下载</p>
+          <button
+            type="button"
+            class="btn-refresh"
+            :disabled="portfolioLoading"
+            @click="loadPortfolio"
+          >
+            {{ portfolioLoading ? "加载中…" : "刷新" }}
+          </button>
+        </header>
+
+        <p v-if="portfolioError" class="portfolio-error">{{ portfolioError }}</p>
+        <p v-else-if="!portfolioLoading && !portfolioItems.length" class="portfolio-empty">
+          暂无成片。生成完成后会自动收录。
+        </p>
+
+        <div v-else class="portfolio-grid">
+          <article
+            v-for="item in portfolioItems"
+            :key="item.project_id"
+            class="work-card"
+            @click="openWork(item)"
+          >
+            <div class="work-cover">
+              <img
+                v-if="item.has_poster"
+                :src="posterUrl(item.project_id)"
+                :alt="item.novel_name"
+                loading="lazy"
+              />
+              <span v-else class="work-cover-placeholder">🎬</span>
+              <span class="work-badge">第 {{ item.episode }} 集</span>
+            </div>
+            <div class="work-info">
+              <h3>{{ item.novel_name }}</h3>
+              <p class="work-meta">
+                {{ formatTime(item.finished_at) }}
+                <span v-if="item.video_size_bytes">
+                  · {{ formatSize(item.video_size_bytes) }}
+                </span>
+              </p>
+            </div>
+          </article>
+        </div>
+
+        <div v-if="selectedWork" class="work-detail">
+          <div class="work-detail-backdrop" @click="closeWorkDetail" />
+          <div class="work-detail-panel">
+            <button type="button" class="work-detail-close" @click="closeWorkDetail">
+              ✕
+            </button>
+            <h2>{{ selectedWork.novel_name }} · 第 {{ selectedWork.episode }} 集</h2>
+            <video
+              :key="selectedWork.project_id"
+              :src="workVideoUrl(selectedWork.project_id)"
+              controls
+              class="work-detail-player"
+            />
+            <a
+              class="btn-download"
+              :href="downloadUrl(selectedWork.project_id)"
+              :download="`${selectedWork.novel_name}_第${String(selectedWork.episode).padStart(2, '0')}集.mp4`"
+            >
+              ↓ 下载视频
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <template v-else>
+      <div v-if="!messages.length" class="hero">
+        <div class="hero-icon">🎬</div>
+        <h1>小说转短视频</h1>
+        <p>填写短剧名称、集数与剧情，一键生成手绘动漫风格竖屏短片</p>
+      </div>
+
+      <div class="chat" ref="chatRef">
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          :class="['msg-row', msg.role]"
+        >
+          <div v-if="msg.role === 'user'" class="bubble user">
+            <pre class="prompt-text">{{ msg.content }}</pre>
+          </div>
+          <div v-else class="bubble assistant">
+            <p class="assistant-text">{{ msg.content }}</p>
+            <div v-if="msg.loading && generating" class="progress-box">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: progress + '%' }" />
+              </div>
+              <span class="progress-label">
+                {{ STAGE_LABELS[currentStage] || currentStage }} ·
+                {{ progress.toFixed(0) }}%
+              </span>
+            </div>
+            <div v-if="msg.video && videoUrl" class="video-card">
+              <span class="ai-tag">AI 生成</span>
+              <video :src="videoUrl" controls class="player" />
+              <a
+                class="btn-download"
+                :href="videoUrl"
+                :download="msg.downloadName"
+              >
+                ↓ 下载视频
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-card">
+          <div class="field-row">
+            <label>
+              <span class="label">短剧名称 <em>*</em></span>
+              <input
+                v-model="novelName"
+                type="text"
+                placeholder="例如：盘龙"
+                maxlength="200"
+              />
+            </label>
+            <label class="episode-field">
+              <span class="label">集数 <em>*</em></span>
+              <input
+                v-model.number="episode"
+                type="number"
+                min="1"
+                max="9999"
+                placeholder="1"
+              />
+            </label>
+          </div>
+          <label class="plot-field">
+            <span class="label">剧情正文 <em>*</em></span>
+            <textarea
+              v-model="plot"
+              rows="5"
+              placeholder="粘贴本集小说片段或剧情描述…"
+            />
+          </label>
+          <div class="composer-actions">
+            <span class="hint">手绘动漫风格 · 竖屏 9:16</span>
+            <button
+              class="btn-send"
+              type="button"
+              :disabled="!canSubmit"
+              @click="handleGenerate"
+            >
+              {{ generating ? "生成中…" : "生成视频" }}
+            </button>
+          </div>
+        </div>
+      </div>
+      </template>
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #8b9bff, #6b7cff);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.btn-new {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+.btn-new:hover {
+  border-color: var(--primary);
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.nav-tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.nav-tab.active {
+  background: rgba(107, 124, 255, 0.12);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.history-title {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.history-empty {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.history-item:hover {
+  background: rgba(107, 124, 255, 0.1);
+}
+
+.history-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.history-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sidebar-foot {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+}
+
+.dot.ok {
+  background: #22c55e;
+}
+
+.dot.err {
+  background: #ef4444;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 24px 24px;
+}
+
+.portfolio {
+  padding-top: 24px;
+  flex: 1;
+}
+
+.portfolio-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.portfolio-header h1 {
+  margin: 0;
+  font-size: 26px;
+  width: 100%;
+}
+
+.portfolio-header p {
+  margin: 0;
+  color: var(--muted);
+  flex: 1;
+  min-width: 200px;
+}
+
+.btn-refresh {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 13px;
+}
+
+.portfolio-error {
+  color: #ef4444;
+}
+
+.portfolio-empty {
+  color: var(--muted);
+  padding: 48px 0;
+  text-align: center;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.work-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.work-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+.work-cover {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.work-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.work-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 40px;
+}
+
+.work-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.work-info {
+  padding: 12px 14px;
+}
+
+.work-info h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.work-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.work-detail {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.work-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.work-detail-panel {
+  position: relative;
+  z-index: 1;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.work-detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.work-detail-panel h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  padding-right: 28px;
+}
+
+.work-detail-player {
+  width: 100%;
+  border-radius: 12px;
+  background: #111;
+  display: block;
+}
+
+.work-detail .btn-download {
+  margin-top: 12px;
+  border-radius: 12px;
+}
+
+.hero {
+  text-align: center;
+  padding: 48px 0 24px;
+}
+
+.hero-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0 120px;
+  min-height: 200px;
+}
+
+.msg-row {
+  margin-bottom: 24px;
+}
+
+.msg-row.user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bubble.user {
+  max-width: 85%;
+  background: var(--user-bubble);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+}
+
+.prompt-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: inherit;
+}
+
+.bubble.assistant {
+  max-width: 100%;
+}
+
+.assistant-text {
+  margin: 0 0 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.progress-box {
+  margin-bottom: 16px;
+}
+
+.progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #9aa8ff);
+  transition: width 0.4s ease;
+}
+
+.progress-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.video-card {
+  position: relative;
+  background: #111;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  max-width: 480px;
+}
+
+.ai-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.player {
+  width: 100%;
+  display: block;
+  max-height: 70vh;
+}
+
+.btn-download {
+  display: block;
+  text-align: center;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.btn-download:hover {
+  background: var(--primary-hover);
+}
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  padding-bottom: 16px;
+  background: linear-gradient(180deg, transparent, var(--bg) 24%);
+}
+
+.composer-card {
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.episode-field {
+  flex: 0 0 120px !important;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.label em {
+  color: #ef4444;
+  font-style: normal;
+}
+
+input,
+textarea {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(107, 124, 255, 0.15);
+}
+
+.plot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.btn-send {
+  padding: 10px 28px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.btn-send:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+</style>

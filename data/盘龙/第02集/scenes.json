@@ -1,0 +1,189 @@
+{
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "希尔曼",
+      "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+      "ref_image": null
+    },
+    {
+      "id": "char_2",
+      "name": "哈德利",
+      "appearance": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
+      "ref_image": null
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc_1",
+      "name": "乌山镇训练场",
+      "description": "open outdoor training ground surrounded by wooden fences and distant mountains, early morning light casting soft golden hues, rows of children standing in formation on grassy earth",
+      "ref_image": null
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "narration": "清晨，阳光洒落，一群孩子站在训练场上，准备开始一天的锻炼。",
+      "visual_prompt": "wide shot of a group of children standing in rows on a grassy field at sunrise, silhouetted by golden morning light, an older man stands before them with hands behind his back",
+      "character_ids": [
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "wide",
+      "duration_sec": 6.504,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_1.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_1.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_1.mp4"
+    },
+    {
+      "id": "scene_2",
+      "narration": "护卫队队长希尔曼冷冷扫视着孩子们，话语中透着严厉与期望。",
+      "visual_prompt": "medium close-up of Hilman speaking sternly, his sharp gaze scanning the northern group of young children, early sunlight highlighting his strong facial features",
+      "character_ids": [
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "closeup",
+      "duration_sec": 6.144,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_2.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_2.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_2.mp4"
+    },
+    {
+      "id": "scene_3",
+      "narration": "孩子们屏息凝神，不敢发出一点声音，生怕惹怒这位严厉的教官。",
+      "visual_prompt": "low angle shot of young children looking up nervously, their wide eyes fixed on Hilman, slight morning breeze ruffling their hair",
+      "character_ids": [
+        "char_2"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "duration_sec": 6.264,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_3.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_3.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_3.mp4"
+    },
+    {
+      "id": "scene_4",
+      "narration": "希尔曼强调，他们虽是平民，但唯有刻苦锻炼，才能赢得尊重。",
+      "visual_prompt": "medium shot of Hilman gesturing firmly while addressing the crowd, older boys showing determined expressions, soft daylight illuminating the training ground",
+      "character_ids": [
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "duration_sec": 6.072,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_4.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_4.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_4.mp4"
+    },
+    {
+      "id": "scene_5",
+      "narration": "孩子们齐声回应，声音响亮，充满稚嫩却坚定的决心。",
+      "visual_prompt": "wide shot of all children shouting in unison, arms stiff at their sides, dust lightly rising from the ground beneath their feet in the morning glow",
+      "character_ids": [],
+      "location_id": "loc_1",
+      "shot_type": "wide",
+      "duration_sec": 5.544,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_5.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_5.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_5.mp4"
+    },
+    {
+      "id": "scene_6",
+      "narration": "希尔曼讲解‘蕴气式’要领，教导孩子们如何凝聚身体潜力。",
+      "visual_prompt": "medium shot of Hilman demonstrating the 'Yunqi Stance'—feet shoulder-width apart, knees slightly bent, hands at waist level, calm expression under gentle sunlight",
+      "character_ids": [
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "duration_sec": 5.592,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_6.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_6.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_6.mp4"
+    },
+    {
+      "id": "scene_7",
+      "narration": "一两百名孩子整齐摆出姿势，努力模仿着最基础的锻炼动作。",
+      "visual_prompt": "aerial view of dozens of children arranged in neat rows, all mimicking the stance, some wobbling slightly, soft mist lingering over the grass",
+      "character_ids": [],
+      "location_id": "loc_1",
+      "shot_type": "wide",
+      "duration_sec": 6.096,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_7.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_7.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_7.mp4"
+    },
+    {
+      "id": "scene_8",
+      "narration": "年长的孩子稳如磐石，而年幼的则站得歪歪扭扭，尚显吃力。",
+      "visual_prompt": "split screen: left shows older boys standing firm with steady breathing; right shows younger kids trembling, legs uneven, struggling to maintain balance",
+      "character_ids": [],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "duration_sec": 6.216,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_8.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_8.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_8.mp4"
+    },
+    {
+      "id": "scene_9",
+      "narration": "希尔曼走向年幼的孩子们，其他教官接手其余队伍。",
+      "visual_prompt": "medium shot of Hilman walking toward the northern group of young children, two other instructors stepping forward to monitor the central and southern teams",
+      "character_ids": [
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "duration_sec": 4.968,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_9.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_9.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_9.mp4"
+    },
+    {
+      "id": "scene_10",
+      "narration": "金发少年哈德利低声惊呼：大魔头来了！孩子们瞬间紧张起来。",
+      "visual_prompt": "close-up of young Hadley whispering with wide eyes, then quickly snapping back to attention as Hilman approaches the group",
+      "character_ids": [
+        "char_2"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "closeup",
+      "duration_sec": 6.624,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_10.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_10.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_10.mp4"
+    },
+    {
+      "id": "scene_11",
+      "narration": "希尔曼脱去背心，露出布满伤痕的肌肉，孩子们眼中闪烁着崇拜的光芒。",
+      "visual_prompt": "slow zoom-in on Hilman removing his vest, revealing scarred torso under warm morning light, young children staring in awe",
+      "character_ids": [
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "closeup",
+      "duration_sec": 6.864,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_11.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_11.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_11.mp4"
+    },
+    {
+      "id": "scene_12",
+      "narration": "刀剑伤痕是男人的勋章，希尔曼的身影在孩子们心中化作英雄的象征。",
+      "visual_prompt": "low angle shot of children gazing up at Hilman's scarred body, sunlight framing him like a hero, silent admiration in their eyes",
+      "character_ids": [
+        "char_1",
+        "char_2"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "duration_sec": 6.84,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\images\\scene_12.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\audio\\scene_12.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第02集\\clips\\scene_12.mp4"
+    }
+  ]
+}

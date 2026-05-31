@@ -1,0 +1,20 @@
+﻿[Script Info]
+Title: full
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,72,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,0,2,40,40,120,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:07.08,Default,,0,0,0,,乌山镇位于魔兽山脉西侧，是芬莱王国中一个平凡却充满生机的小镇。
+Dialogue: 0,0:00:07.08,0:00:13.03,Default,,0,0,0,,清晨的阳光洒落，小镇渐渐苏醒，居民们开始了一天的劳作。
+Dialogue: 0,0:00:13.03,0:00:18.33,Default,,0,0,0,,连六七岁的孩子也早早起床，在空地上进行晨练。
+Dialogue: 0,0:00:18.33,0:00:23.85,Default,,0,0,0,,东边空地旁大树斑驳的树影下，上百名孩子整齐列队。
+Dialogue: 0,0:00:23.85,0:00:28.53,Default,,0,0,0,,最北边是六到八岁的孩童，神情认真地站着。
+Dialogue: 0,0:00:28.53,0:00:32.35,Default,,0,0,0,,中间一队九到十二岁，已显少年模样。
+Dialogue: 0,0:00:32.35,0:00:36.74,Default,,0,0,0,,南边则是十三到十六岁的少年，身姿挺拔。
+Dialogue: 0,0:00:36.74,0:00:42.35,Default,,0,0,0,,三名壮硕教头站在队伍前方，身穿短背心与粗布裤。

@@ -1,0 +1,1 @@
+{"sessionId": "dee341", "location": "llm_scene.py:parse_novel_to_scenes", "message": "LLM request URL", "data": {"chat_url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "model": "qwen-plus-2025-07-28"}, "timestamp": 1780236134745, "hypothesisId": "A", "runId": "pre-fix"}
