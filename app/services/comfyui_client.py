@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from app.core.config_loader import get_root, load_config
-from app.core.paths import character_ref_path
-from app.services import character_refs
+
+from app.core.config_loader import load_config
+from app.core.paths import character_ref_path, to_storage_path
+from app.services import character_refs, graph_context
 from app.services.mock_image import create_mock_image as render_mock_image
 from app.core.schemas import Character, Location, Scene
 
@@ -90,12 +91,29 @@ async def generate_scene_image(
 
     char_map = {c.id: c for c in characters}
     loc_map = {loc.id: loc for loc in (locations or [])}
-    prompt = character_refs.build_scene_visual_prompt(
-        scene,
-        char_map,
-        loc_map,
-        with_ref=bool(ref_image and ref_image.exists()),
-    )
+    img_cfg = load_config("image")
+    env_scene = character_refs.is_environment_scene(scene)
+
+    if env_scene:
+        prompt = character_refs.build_environment_prompt(scene, loc_map)
+        prefix = img_cfg.get("style_prefix", "").strip()
+        suffix = img_cfg.get("style_suffix", "").strip()
+        if prefix:
+            prompt = f"{prefix} {prompt}"
+        if suffix:
+            prompt = f"{prompt}, {suffix}"
+        ref_image = None
+    else:
+        graph_hints = (
+            graph_context.get_scene_graph_hints(novel_name, scene) if novel_name else None
+        )
+        prompt = character_refs.build_scene_visual_prompt(
+            scene,
+            char_map,
+            loc_map,
+            with_ref=bool(ref_image and ref_image.exists()),
+            graph_hints=graph_hints,
+        )
 
     if use_mock or not await comfyui_reachable():
         return render_mock_image(scene, characters, output_path)
@@ -106,13 +124,18 @@ async def generate_scene_image(
     pos_path = mappings.get("positive_prompt", ["6", "inputs", "text"])
     neg_path = mappings.get("negative_prompt", ["7", "inputs", "text"])
     _set_nested(workflow, [str(pos_path[0])] + pos_path[1:], prompt)
+    negative = cfg.get("default_negative", "low quality")
+    if env_scene:
+        extra = img_cfg.get("environment_negative_suffix", "")
+        if extra:
+            negative = f"{negative}, {extra}"
     _set_nested(
         workflow,
         [str(neg_path[0])] + neg_path[1:],
-        cfg.get("default_negative", "low quality"),
+        negative,
     )
 
-    if ref_image and ref_image.exists():
+    if ref_image and ref_image.exists() and not env_scene:
         ref_name = await _upload_image(host, ref_image)
         ref_path = mappings.get("reference_image")
         if ref_path:
@@ -183,14 +206,14 @@ async def generate_all_images(
         if not ref_path.exists():
             ref_path.parent.mkdir(parents=True, exist_ok=True)
             await generate_character_ref(char, ref_path, novel_name)
-        char.ref_image = str(ref_path)
+        char.ref_image = to_storage_path(ref_path)
 
     character_refs.save_registry(novel_name, characters, locs)
 
     updated: list[Scene] = []
     for scene in scenes:
         ref: Path | None = None
-        if scene.character_ids:
+        if scene.character_ids and not character_refs.is_environment_scene(scene):
             ref = character_refs.pick_scene_ref_image(scene, char_map, novel_name)
         out = images_dir / f"{scene.id}.png"
         await generate_scene_image(

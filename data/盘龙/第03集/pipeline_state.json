@@ -1,0 +1,12 @@
+{
+  "input_fingerprint": "8ab63b8a4259b84d8c087a9d1fcebd49cd03b7ed259c0b60d8831716c72362f4",
+  "completed_stages": [
+    "parse_scenes",
+    "generate_images",
+    "tts",
+    "motion_clips",
+    "subtitles",
+    "assemble"
+  ],
+  "updated_at": "2026-06-07T06:35:36.516352+00:00"
+}

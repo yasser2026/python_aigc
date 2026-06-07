@@ -2,20 +2,25 @@
   "model": "qwen-image-2.0-pro-2026-04-22",
   "base_url": "https://dashscope.aliyuncs.com/api/v1",
   "api_key": "${DASHSCOPE_API_KEY}",
-  "size": "1080*1920",
+  "size": "1920*1080",
   "style_prefix": "Hand-drawn anime illustration, Hayao Miyazaki film style,",
   "style_suffix": "soft painterly watercolor feel, warm natural lighting, gentle colors, peaceful nostalgic mood, clean line art, atmospheric depth, consistent hand-drawn anime style",
   "negative_prompt": "low quality, blurry, distorted, watermark, text, logo, photorealistic, 3d render, CGI, digital painting, cyberpunk, horror, neon, oversaturated, inconsistent style",
   "prompt_extend": true,
   "watermark": false,
   "use_character_ref": true,
-  "ref_portrait_size": "768*1152",
+  "ref_portrait_size": "1152*768",
   "ref_scene_prompt_suffix": "Keep the same character face, hairstyle, and outfit as the reference image. Only change pose and background for this scene.",
+  "environment_prompt_suffix": "establishing shot, empty scene, no people, no characters, atmospheric environment depth",
+  "environment_negative_suffix": "people, human figures, characters, faces, crowd, portrait, person",
+  "relationship_prompt_suffix": "Relationship context:",
   "request_timeout_sec": 180,
-  "rate_limit_rpm": 2,
-  "request_interval_sec": 32,
+  "download_timeout_sec": 300,
+  "skip_existing_images": true,
+  "rate_limit_rpm": 4,
+  "request_interval_sec": 16,
   "retry": {
     "max_attempts": 6,
-    "backoff_sec": [35, 45, 60, 90]
+    "backoff_sec": [18, 22, 30, 45]
   }
 }

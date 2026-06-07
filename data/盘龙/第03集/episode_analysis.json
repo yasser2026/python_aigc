@@ -1,0 +1,16 @@
+{
+  "book_protagonist_id": "char_1",
+  "fragment_focus_ids": [
+    "char_3",
+    "char_1"
+  ],
+  "fragment_summary": "希尔曼通过展示力量激发孩童训练热情，林雷在首次锻炼中展现出远超同龄人的毅力与资质。",
+  "role_notes": {
+    "char_1": "全书主角，本段叙事中心之一，首次登场展现潜力",
+    "char_3": "本段主要推动者，通过示范与训话主导情节发展",
+    "char_2": "配角，背景孩童之一，无独立戏份",
+    "char_4": "指导者之一，辅助角色",
+    "char_5": "指导者之一，辅助角色"
+  },
+  "episode_supporting_names": []
+}

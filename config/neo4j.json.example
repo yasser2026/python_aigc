@@ -1,0 +1,10 @@
+{
+  "enabled": false,
+  "uri": "bolt://127.0.0.1:7687",
+  "user": "neo4j",
+  "password": "your_password",
+  "database": "neo4j",
+  "fallback_to_json": true,
+  "max_relations_in_prompt": 5,
+  "max_events_in_prompt": 3
+}

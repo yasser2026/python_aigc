@@ -39,6 +39,13 @@
    docker run -d --name milvus -p 19530:19530 milvusdb/milvus:latest
    # config/milvus.json 中 enabled: true，uri: http://127.0.0.1:19530
 
+7. （可选）Neo4j 知识图谱
+docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/JinFan123456 -v neo4j_data:/data neo4j:5
+
+   # config/neo4j.json 中 enabled: true，uri: bolt://127.0.0.1:7687
+   # .env 可设 NEO4J_URI / NEO4J_USER / NEO4J_PASSWORD
+   # 未启 Neo4j 时仍写入 data/{小说名}/knowledge_graph.json
+
 ================================================================================
 二、构建前端
 ================================================================================
@@ -84,8 +91,23 @@ sudo systemctl reload nginx
   curl https://aigc.lawaibot.com.cn/api/health
 
 ================================================================================
-五、后端常驻（systemd 示例）
+五、后端常驻
 ================================================================================
+
+### 方式 A：run.sh（简单后台）
+
+chmod +x run.sh
+./run.sh start          # 后台启动，日志 logs/aigc-api.log
+./run.sh status
+./run.sh stop
+./run.sh restart
+./run.sh fg             # 前台调试
+
+优先使用 .venv/bin/python；若用 conda：
+  export PYTHON=/opt/miniconda3/envs/aigc/bin/python
+  ./run.sh start
+
+### 方式 B：systemd（开机自启）
 
 sudo tee /etc/systemd/system/aigc-api.service << 'EOF'
 [Unit]

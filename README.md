@@ -29,10 +29,11 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env          # 填入 DASHSCOPE_API_KEY
 python run.py
+# Linux 后台：chmod +x run.sh && ./run.sh start
 ```
 
-服务默认：`http://127.0.0.1:8000`  
-文档：`http://127.0.0.1:8000/docs`
+服务默认：`http://127.0.0.1:8091`（见 `config/app.json`）  
+文档：`http://127.0.0.1:8091/docs`
 
 ### Web 前端（Vue）
 
@@ -45,7 +46,7 @@ cd aigc_front && npm install && npm run dev
 ### 作品集 API
 
 ```bash
-curl http://127.0.0.1:8000/portfolio
+curl http://127.0.0.1:8091/portfolio
 ```
 
 返回所有含 `output/final.mp4` 的项目；封面图：`GET /portfolio/{小说名/第01集}/poster`。
@@ -53,7 +54,7 @@ curl http://127.0.0.1:8000/portfolio
 ### 健康检查
 
 ```bash
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8091/health
 ```
 
 返回 FFmpeg / ComfyUI 是否可用；`comfyui_mock: true` 表示使用占位图（见 `config/comfyui.json` 的 `"mock": true`）。
@@ -61,9 +62,9 @@ curl http://127.0.0.1:8000/health
 ### 创建项目
 
 ```bash
-curl -X POST http://127.0.0.1:8000/projects ^
+curl -X POST http://127.0.0.1:8091/projects ^
   -H "Content-Type: application/json" ^
-  -d "{\"novel_name\": \"盘龙\", \"episode\": 1, \"text\": \"夜色如墨，少年推门而入……\"}"
+  -d "{\"novel_name\": \"盘龙\", \"episode\": 1, \"text\": \"夜色如墨，少年推门而入……\", \"narrative_mode\": \"protagonist_focus\"}"
 ```
 
 响应示例：
@@ -75,7 +76,7 @@ curl -X POST http://127.0.0.1:8000/projects ^
 ### 查询进度
 
 ```bash
-curl "http://127.0.0.1:8000/projects/盘龙/第01集"
+curl "http://127.0.0.1:8091/projects/盘龙/第01集"
 ```
 
 状态流转：`pending` → `parsing` → `imaging` → `audio` → `motion` → `subtitles` → `assembling` → `done`
@@ -83,17 +84,18 @@ curl "http://127.0.0.1:8000/projects/盘龙/第01集"
 ### 下载成片
 
 ```bash
-curl -O -J "http://127.0.0.1:8000/projects/盘龙/第01集/download"
+curl -O -J "http://127.0.0.1:8091/projects/盘龙/第01集/download"
 
-curl.exe -s http://127.0.0.1:8000/projects/9f66d69e-1652-44f4-b604-e3fbc183f258
+curl.exe -s http://127.0.0.1:8091/projects/9f66d69e-1652-44f4-b604-e3fbc183f258
 ```
 
 产物目录：`data/{小说名}/第{集数}集/`
 
 ```
 data/盘龙/第01集/
-├── meta.json        # 小说名、集数
-├── scenes.json      # 分镜与角色
+├── meta.json        # 小说名、集数、叙事模式
+├── episode_analysis.json  # 本段焦点角色、全书主角、剧情摘要
+├── scenes.json      # 分镜与角色（含 scene_type / focus_character_ids）
 ├── images/          # 场景图
 ├── audio/           # TTS mp3
 ├── clips/           # 分镜视频
@@ -111,9 +113,9 @@ data/盘龙/第01集/
 | `image.json` | 千问生图模型、尺寸、`rate_limit_rpm`（默认 2）、`request_interval_sec`、429 重试 |
 | `llm.json` | 千问 DashScope 地址、模型、分镜 system prompt |
 | `comfyui.json` | ComfyUI 地址、`mock`、节点字段映射 |
-| `tts.json` | edge-tts 音色 |
+| `tts.json` | edge-tts 旁白/角色多音色（`narrator_voice`、`voice_by_profile`、`voice_map`） |
 | `ffmpeg.json` | 分辨率 1080×1920、Ken Burns、字幕样式 |
-| `pipeline.json` | 场景数上限、阶段列表、重试次数 |
+| `pipeline.json` | 场景数上限、阶段列表、重试次数、`narrative_mode_default` |
 
 ### 生图方式（`config/app.json` → `image_provider`）
 
@@ -131,10 +133,55 @@ data/盘龙/第01集/
 
 ### 角色 / 场所一致性（Milvus + ref_image）
 
+- **小说元数据**：`data/{小说名}/novel_meta.json` 记录 `protagonist_id`、`protagonist_name`、`protagonist_locked`、角色 `role/gender/age_group/aliases`；创建任务时可传 `narrative_mode`（`protagonist_focus` 默认 / `faithful`）、**`protagonist_name`（全书主角，首次设定后锁定）** 与 **`supporting_names`（本集配角，每集可不同）**。
 - **向量库**：`config/milvus.json`（默认 `enabled: true`，`uri: http://127.0.0.1:19530`）。分镜后把主角、配角、场所的文本设定写入 **Milvus**（DashScope `text-embedding-v3`）；新集按语义检索合并历史 `appearance` / `description`。Milvus 不可用时自动降级到 `data/milvus_fallback.json`。
-- **参考图**：`data/{小说名}/characters/{char_id}/ref.png`；`characters.json` / `locations.json` 与向量库同步。
+- **跨集 id 稳定**：分镜后按 **角色名** 对齐 `characters.json` 中的 canonical id，避免每集把配角写进 `char_1` 覆盖主角。
+- **参考图**：`data/{小说名}/characters/{char_id}/ref.png`；`characters.json` / `locations.json` / `novel_meta.json` 与向量库同步。
 - **生图**：先补角色立绘参考图，场景图带参考图调用 Qwen（`use_character_ref`）或 ComfyUI IP-Adapter；场景 prompt 注入向量库检索到的角色与场所描述。
 - 启动 Milvus（Docker 示例）：`docker run -d --name milvus -p 19530:19530 milvusdb/milvus:latest`
+
+### 知识图谱（Neo4j + JSON 备份）
+
+- **存储**：`config/neo4j.json`（默认 `enabled: false`，JSON fallback 始终写入 `data/{小说名}/knowledge_graph.json`）
+- **节点**：Character、Location、Episode、Scene、PlotEvent
+- **关系**：`RELATED_TO`（人物关系）、`APPEARS_IN`、`SET_IN`、`PART_OF`、`INVOLVES`、`NEXT_EPISODE`
+- **写入时机**：每集分镜完成后 `merge_episode` + LLM 输出的 `graph_delta`（人物关系与本段剧情事件）
+- **消费**：分镜 prompt 注入跨集摘要与关系；生图 prompt 注入关系上下文；TTS 校验说话人并按关系微调语速；字幕对话镜加「角色名：」前缀
+- **开关**：`config/pipeline.json` → `knowledge_graph.enabled` / `inject_in_prompt`
+- **API**：`GET /novels/{小说名}/graph`、`GET /novels/{小说名}/graph/characters/{char_id}/relations`、`POST /novels/{小说名}/graph/backfill`
+- 启动 Neo4j（Docker 示例）：`docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5`
+
+### TTS 多音色（`config/tts.json`）
+
+| 配置项 | 说明 |
+|--------|------|
+| `narrator_voice` | 旁白/解说音色（默认 `zh-CN-YunxiNeural`） |
+| `voice_by_profile` | 按 `gender_age_group` 映射角色音色，如 `male_child` → `zh-CN-YunyiNeural` |
+| `voice_map` | 按 `char_id` 覆盖特定角色音色 |
+
+场景含对话且识别到说话人（`narration_speaker_id`）时使用角色音色，否则使用旁白音色。
+
+### 叙事模式
+
+| 值 | 说明 |
+|----|------|
+| `protagonist_focus`（默认） | 以全书主角为叙事中心，主角镜头占比不足时自动二次修正分镜 |
+| `faithful` | 忠实原文 POV，仅做人名/id 对齐与说话人推断，不改写剧情侧重 |
+
+### 剧情角色梳理与场景类型
+
+单次 LLM 分镜会输出 `episode_analysis` 与每镜 `scene_type`：
+
+| 字段 / 类型 | 说明 |
+|-------------|------|
+| `episode_analysis.book_protagonist_id` | 全书主角 |
+| `episode_analysis.fragment_focus_ids` | **本剧情片段**主要角色（1–3 人） |
+| `episode_analysis.fragment_summary` | 本段剧情摘要 |
+| `scene_type: environment` | 无人环境镜，`character_ids` 为空，纯场所渲染 |
+| `scene_type: character` | 人物特写/对话，`focus_character_ids` 为画面焦点 |
+| `scene_type: crowd` | 群像，不绑单一角色 ref |
+
+环境镜生图使用 `config/image.json` 的 `environment_prompt_suffix` / `environment_negative_suffix`，不传角色参考图。
 
 全片画风在 `config/image.json` 的 `style_prefix` / `style_suffix` 统一（默认：手绘动漫、宫崎骏相似风格）。想换风格只改这两项和 `llm.json` 里的画风说明即可。
 
@@ -155,7 +202,13 @@ DASHSCOPE_API_KEY=sk-...
 COMFYUI_HOST=http://127.0.0.1:8188
 ```
 
-创建任务时 **`novel_name`、`episode`（第几集）、`text`（正文）均为必填**。
+创建任务时 **`novel_name`、`episode`（第几集）、`text`（正文）均为必填**。可选 **`protagonist_name`** 指定全书主角（**多个主角**用分号 `;`、逗号 `,` 或空格分隔，如 `林雷；德林`）；首次成功写入后 `novel_meta.json` 中 `protagonist_locked: true`，后续分镜与 LLM 不得改绑。可选 **`supporting_names`** 指定本集配角（同样支持多名称分隔，写入 `meta.json` 的 `supporting_names[]`，每集可不同、不锁定）。
+
+查询已锁定主角：`GET /novels/{小说名}/meta`
+
+```bash
+curl "http://127.0.0.1:8091/novels/盘龙/meta"
+```
 
 ## 流水线阶段
 

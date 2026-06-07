@@ -1,7 +1,7 @@
 {
   "max_scenes_per_chapter": 12,
   "scene_duration_sec": 4,
-  "aspect_ratio": "9:16",
+  "aspect_ratio": "16:9",
   "character_consistency": {
     "method": "ref_image",
     "scope": "per_novel",
@@ -26,5 +26,13 @@
   },
   "quality_filter": {
     "enabled": false
+  },
+  "narrative_mode_default": "protagonist_focus",
+  "knowledge_graph": {
+    "enabled": true,
+    "inject_in_prompt": true
+  },
+  "cache": {
+    "enabled": true
   }
 }

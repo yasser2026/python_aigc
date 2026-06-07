@@ -4,6 +4,7 @@ import {
   createProject,
   downloadUrl,
   fetchHealth,
+  fetchNovelMeta,
   fetchPortfolio,
   getProject,
   posterUrl,
@@ -23,6 +24,10 @@ const STAGE_LABELS = {
 
 const novelName = ref("");
 const episode = ref(1);
+const narrativeMode = ref("protagonist_focus");
+const protagonistName = ref("");
+const protagonistLocked = ref(false);
+const supportingNames = ref("");
 const plot = ref("");
 const messages = ref([]);
 const history = ref([]);
@@ -47,6 +52,60 @@ const canSubmit = computed(
     episode.value >= 1 &&
     plot.value.trim()
 );
+
+/** 单行输入：去首尾空白，连续空格合并为一个 */
+function normalizeLineField(value) {
+  return value.trim().replace(/[ \u3000]+/g, " ");
+}
+
+/** 人名列表：去空白、统一用分号分隔 */
+function normalizeNameListField(value) {
+  return value
+    .trim()
+    .split(/[;；,\，、\s]+/)
+    .map((s) => s.trim().replace(/[ \u3000]+/g, " "))
+    .filter(Boolean)
+    .join("；");
+}
+
+/** 剧情正文：去行首尾空白、合并连续空行、去掉首尾空行 */
+function normalizePlot(value) {
+  const lines = value.replace(/\t/g, " ").replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  let prevBlank = false;
+  for (let line of lines) {
+    line = line.trim().replace(/[ \u3000]{2,}/g, " ");
+    if (!line) {
+      if (!prevBlank && out.length > 0) out.push("");
+      prevBlank = true;
+      continue;
+    }
+    prevBlank = false;
+    out.push(line);
+  }
+  while (out.length && out[out.length - 1] === "") out.pop();
+  return out.join("\n");
+}
+
+function normalizeAllInputs() {
+  novelName.value = normalizeLineField(novelName.value);
+  if (protagonistName.value.trim()) {
+    protagonistName.value = normalizeNameListField(protagonistName.value);
+  }
+  if (supportingNames.value.trim()) {
+    supportingNames.value = normalizeNameListField(supportingNames.value);
+  }
+  plot.value = normalizePlot(plot.value);
+}
+
+function onNovelNameBlur() {
+  novelName.value = normalizeLineField(novelName.value);
+  loadNovelProtagonist();
+}
+
+function onPlotBlur() {
+  plot.value = normalizePlot(plot.value);
+}
 
 function loadHistory() {
   try {
@@ -95,7 +154,28 @@ async function pollUntilDone(id) {
   throw new Error("生成超时，请稍后在历史记录中重试查询");
 }
 
+async function loadNovelProtagonist() {
+  const name = novelName.value.trim();
+  if (!name) {
+    protagonistLocked.value = false;
+    return;
+  }
+  try {
+    const meta = await fetchNovelMeta(name);
+    if (!meta) return;
+    if (meta.protagonist_names?.length) {
+      protagonistName.value = meta.protagonist_names.join("；");
+    } else if (meta.protagonist_name) {
+      protagonistName.value = meta.protagonist_name;
+    }
+    protagonistLocked.value = Boolean(meta.protagonist_locked);
+  } catch {
+    /* ignore */
+  }
+}
+
 async function handleGenerate() {
+  normalizeAllInputs();
   if (!canSubmit.value) return;
 
   generating.value = true;
@@ -112,6 +192,9 @@ async function handleGenerate() {
       novel_name: novelName.value.trim(),
       episode: Number(episode.value),
       text: plot.value.trim(),
+      narrative_mode: narrativeMode.value,
+      protagonist_name: protagonistName.value.trim() || undefined,
+      supporting_names: supportingNames.value.trim() || undefined,
     });
 
     projectId.value = created.project_id;
@@ -397,6 +480,23 @@ onMounted(async () => {
                 type="text"
                 placeholder="例如：盘龙"
                 maxlength="200"
+                @blur="onNovelNameBlur"
+              />
+            </label>
+            <label class="episode-field protagonist-field">
+              <span class="label">全书主角</span>
+              <input
+                v-model="protagonistName"
+                type="text"
+                placeholder="林雷 或 林雷；德林"
+                maxlength="300"
+                :disabled="protagonistLocked"
+                :title="
+                  protagonistLocked
+                    ? '该小说主角已锁定'
+                    : '多个主角用分号、逗号或空格分隔，首次生成后锁定'
+                "
+                @blur="protagonistName = normalizeNameListField(protagonistName)"
               />
             </label>
             <label class="episode-field">
@@ -409,6 +509,25 @@ onMounted(async () => {
                 placeholder="1"
               />
             </label>
+            <label class="episode-field">
+              <span class="label">叙事模式</span>
+              <select v-model="narrativeMode" class="mode-select">
+                <option value="protagonist_focus">主角视角</option>
+                <option value="faithful">忠实原文</option>
+              </select>
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="supporting-field">
+              <span class="label">本集配角</span>
+              <input
+                v-model="supportingNames"
+                type="text"
+                placeholder="希尔曼；哈德利（分号、逗号或空格分隔，每集可不同）"
+                maxlength="500"
+                @blur="supportingNames = normalizeNameListField(supportingNames)"
+              />
+            </label>
           </div>
           <label class="plot-field">
             <span class="label">剧情正文 <em>*</em></span>
@@ -416,10 +535,14 @@ onMounted(async () => {
               v-model="plot"
               rows="5"
               placeholder="粘贴本集小说片段或剧情描述…"
+              @blur="onPlotBlur"
             />
           </label>
           <div class="composer-actions">
-            <span class="hint">手绘动漫风格 · 竖屏 9:16</span>
+            <span class="hint">
+              手绘动漫 · 竖屏 9:16
+              <template v-if="protagonistLocked"> · 主角已锁定</template>
+            </span>
             <button
               class="btn-send"
               type="button"
@@ -913,6 +1036,15 @@ onMounted(async () => {
   flex: 0 0 120px !important;
 }
 
+.protagonist-field {
+  flex: 1 1 180px !important;
+  min-width: 140px;
+}
+
+.supporting-field {
+  flex: 1 1 100%;
+}
+
 .label {
   font-size: 13px;
   color: var(--muted);
@@ -925,17 +1057,24 @@ onMounted(async () => {
 }
 
 input,
-textarea {
+textarea,
+select {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 14px;
   outline: none;
   resize: vertical;
+  background: var(--surface, #fff);
+}
+
+.mode-select {
+  cursor: pointer;
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(107, 124, 255, 0.15);
 }

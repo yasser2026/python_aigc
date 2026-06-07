@@ -1,14 +1,111 @@
 {
   "char_1": {
     "id": "char_1",
-    "name": "希尔曼",
-    "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
-    "ref_image": "D:\\code\\python\\python_agic\\data\\盘龙\\characters\\char_1\\ref.png"
+    "name": "林雷",
+    "appearance": "a young boy around six years old with short black hair, round face, lean child frame, wearing simple cloth clothes and leather boots",
+    "ref_image": "data/盘龙/characters/char_1/ref.png",
+    "role": "protagonist",
+    "gender": "male",
+    "age_group": "child",
+    "aliases": [
+      "林雷巴鲁克"
+    ],
+    "default_variant_id": "default",
+    "variants": {
+      "default": {
+        "variant_id": "default",
+        "label": null,
+        "appearance": "a young boy around six years old with short black hair, round face, lean child frame, wearing simple cloth clothes and leather boots",
+        "age_group": "child",
+        "ref_image": "data/盘龙/characters/char_1/ref.png",
+        "aliases": [
+          "林雷巴鲁克"
+        ]
+      }
+    }
   },
   "char_2": {
     "id": "char_2",
     "name": "哈德利",
     "appearance": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
-    "ref_image": "D:\\code\\python\\python_agic\\data\\盘龙\\characters\\char_2\\ref.png"
+    "ref_image": "data/盘龙/characters/char_2/ref.png",
+    "role": "minor",
+    "gender": "male",
+    "age_group": "child",
+    "aliases": [],
+    "default_variant_id": "default",
+    "variants": {
+      "default": {
+        "variant_id": "default",
+        "label": null,
+        "appearance": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
+        "age_group": "child",
+        "ref_image": "data/盘龙/characters/char_2/ref.png",
+        "aliases": []
+      }
+    }
+  },
+  "char_3": {
+    "id": "char_3",
+    "name": "希尔曼",
+    "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+    "ref_image": "data/盘龙/characters/char_3/ref.png",
+    "role": "supporting",
+    "gender": "male",
+    "age_group": "adult",
+    "aliases": [],
+    "default_variant_id": "default",
+    "variants": {
+      "default": {
+        "variant_id": "default",
+        "label": null,
+        "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+        "age_group": "adult",
+        "ref_image": "data/盘龙/characters/char_3/ref.png",
+        "aliases": []
+      }
+    }
+  },
+  "char_4": {
+    "id": "char_4",
+    "name": "罗瑞",
+    "appearance": "young adult male instructor, athletic build, short brown hair, wearing simple trainer's clothes, friendly expression",
+    "ref_image": "data/盘龙/characters/char_4/ref.png",
+    "role": "supporting",
+    "gender": "male",
+    "age_group": "adult",
+    "aliases": [],
+    "default_variant_id": "default",
+    "variants": {
+      "default": {
+        "variant_id": "default",
+        "label": null,
+        "appearance": "young adult male instructor, athletic build, short brown hair, wearing simple trainer's clothes, friendly expression",
+        "age_group": "adult",
+        "ref_image": "data/盘龙/characters/char_4/ref.png",
+        "aliases": []
+      }
+    }
+  },
+  "char_5": {
+    "id": "char_5",
+    "name": "罗杰",
+    "appearance": "young adult male instructor, fit build, serious expression, wearing trainer's clothes, observing children",
+    "ref_image": "data/盘龙/characters/char_5/ref.png",
+    "role": "supporting",
+    "gender": "male",
+    "age_group": "adult",
+    "aliases": [],
+    "default_variant_id": "default",
+    "variants": {
+      "default": {
+        "variant_id": "default",
+        "label": null,
+        "appearance": "young adult male instructor, fit build, serious expression, wearing trainer's clothes, observing children",
+        "age_group": "adult",
+        "ref_image": "data/盘龙/characters/char_5/ref.png",
+        "aliases": []
+      }
+    }
   }
 }

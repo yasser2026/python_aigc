@@ -6,7 +6,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.core.schemas import ProjectArtifacts, ProjectStatus
+from app.core.schemas import NarrativeMode, ProjectArtifacts, ProjectStatus
 
 
 @dataclass
@@ -15,6 +15,8 @@ class ProjectRecord:
     novel_name: str
     episode: int
     text: str
+    narrative_mode: NarrativeMode = "protagonist_focus"
+    supporting_names: list[str] = field(default_factory=list)
     status: ProjectStatus = ProjectStatus.PENDING
     progress: float = 0.0
     current_stage: str | None = None
@@ -37,6 +39,8 @@ class TaskStore:
         text: str,
         work_dir: str,
         overrides: dict | None = None,
+        narrative_mode: NarrativeMode = "protagonist_focus",
+        supporting_names: list[str] | None = None,
     ) -> ProjectRecord:
         record = ProjectRecord(
             project_id=project_id,
@@ -44,6 +48,8 @@ class TaskStore:
             episode=episode,
             text=text,
             work_dir=work_dir,
+            narrative_mode=narrative_mode,
+            supporting_names=supporting_names or [],
             config_overrides=overrides or {},
         )
         with self._lock:

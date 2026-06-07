@@ -11,9 +11,9 @@ from pathlib import Path
 import httpx
 
 from app.core.config_loader import load_config
-from app.core.paths import character_ref_path
+from app.core.paths import character_ref_path, to_storage_path
 from app.core.schemas import Character, Location, Scene
-from app.services import character_refs
+from app.services import character_refs, graph_context
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,17 @@ def _max_attempts(cfg: dict) -> int:
     return int(retry.get("max_attempts", len(backoff) + 1))
 
 
+def _client_timeout(cfg: dict, *, download: bool = False) -> httpx.Timeout:
+    key = "download_timeout_sec" if download else "request_timeout_sec"
+    default = 300.0 if download else 180.0
+    total = float(cfg.get(key, cfg.get("request_timeout_sec", default)))
+    return httpx.Timeout(total, connect=30.0)
+
+
+def _transient_http_status(code: int) -> bool:
+    return code in (429, 502, 503, 504)
+
+
 def _request_interval_sec(cfg: dict) -> float:
     """Min seconds between scene requests (Qwen image pro: 2 RPM)."""
     if "request_interval_sec" in cfg:
@@ -74,6 +85,11 @@ def _request_interval_sec(cfg: dict) -> float:
     rpm = float(cfg.get("rate_limit_rpm", 2))
     rpm = max(rpm, 0.1)
     return 60.0 / rpm + 2.0
+
+
+def _wait_before_retry(cfg: dict, attempt: int, backoff: list[float]) -> float:
+    wait = backoff[min(attempt, len(backoff) - 1)] if backoff else 5.0
+    return max(wait, _request_interval_sec(cfg))
 
 
 def _post_with_retry(
@@ -86,14 +102,29 @@ def _post_with_retry(
 ) -> dict:
     backoff = _retry_backoff_sec(cfg)
     max_attempts = _max_attempts(cfg)
-    min_wait = _request_interval_sec(cfg)
     last_err: Exception | None = None
 
     for attempt in range(max_attempts):
-        resp = client.post(url, headers=headers, json=body)
+        try:
+            resp = client.post(url, headers=headers, json=body)
+        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.ConnectError) as e:
+            last_err = e
+            if attempt >= max_attempts - 1:
+                break
+            wait = _wait_before_retry(cfg, attempt, backoff)
+            logger.warning(
+                "Qwen image API timeout for %s, attempt %s/%s (%s), sleep %.0fs",
+                scene_id,
+                attempt + 1,
+                max_attempts,
+                type(e).__name__,
+                wait,
+            )
+            time.sleep(wait)
+            continue
+
         if resp.status_code == 429:
-            wait = backoff[min(attempt, len(backoff) - 1)] if backoff else 5.0
-            wait = max(wait, min_wait)
+            wait = _wait_before_retry(cfg, attempt, backoff)
             logger.warning(
                 "Qwen image 429 for %s, attempt %s/%s, sleep %.0fs",
                 scene_id,
@@ -117,15 +148,80 @@ def _post_with_retry(
             return data
         except httpx.HTTPStatusError as e:
             last_err = e
-            if e.response.status_code == 429 and attempt < max_attempts - 1:
-                wait = backoff[min(attempt, len(backoff) - 1)] if backoff else 5.0
-                wait = max(wait, min_wait)
+            if _transient_http_status(e.response.status_code) and attempt < max_attempts - 1:
+                wait = _wait_before_retry(cfg, attempt, backoff)
+                logger.warning(
+                    "Qwen image HTTP %s for %s, attempt %s/%s, sleep %.0fs",
+                    e.response.status_code,
+                    scene_id,
+                    attempt + 1,
+                    max_attempts,
+                    wait,
+                )
                 time.sleep(wait)
                 continue
             raise
 
     raise RuntimeError(
-        f"Qwen image rate limited for {scene_id} after {max_attempts} attempts"
+        f"Qwen image API failed for {scene_id} after {max_attempts} attempts"
+    ) from last_err
+
+
+def _get_with_retry(
+    client: httpx.Client,
+    image_url: str,
+    scene_id: str,
+    cfg: dict,
+) -> bytes:
+    """Download generated image with retries on timeout / transient errors."""
+    backoff = _retry_backoff_sec(cfg)
+    max_attempts = _max_attempts(cfg)
+    download_timeout = _client_timeout(cfg, download=True)
+    last_err: Exception | None = None
+
+    for attempt in range(max_attempts):
+        try:
+            resp = client.get(image_url, timeout=download_timeout)
+            resp.raise_for_status()
+            return resp.content
+        except httpx.HTTPStatusError as e:
+            last_err = e
+            if _transient_http_status(e.response.status_code) and attempt < max_attempts - 1:
+                wait = _wait_before_retry(cfg, attempt, backoff)
+                logger.warning(
+                    "Qwen image download HTTP %s for %s, attempt %s/%s, sleep %.0fs",
+                    e.response.status_code,
+                    scene_id,
+                    attempt + 1,
+                    max_attempts,
+                    wait,
+                )
+                time.sleep(wait)
+                continue
+            raise
+        except (
+            httpx.ReadTimeout,
+            httpx.ConnectTimeout,
+            httpx.ConnectError,
+            httpx.RemoteProtocolError,
+            httpx.WriteTimeout,
+        ) as e:
+            last_err = e
+            if attempt >= max_attempts - 1:
+                break
+            wait = _wait_before_retry(cfg, attempt, backoff)
+            logger.warning(
+                "Qwen image download failed for %s, attempt %s/%s (%s), sleep %.0fs",
+                scene_id,
+                attempt + 1,
+                max_attempts,
+                type(e).__name__,
+                wait,
+            )
+            time.sleep(wait)
+
+    raise RuntimeError(
+        f"Qwen image download failed for {scene_id} after {max_attempts} attempts"
     ) from last_err
 
 
@@ -159,12 +255,21 @@ def generate_scene_image_sync(
     char_map = {c.id: c for c in (characters or [])}
     loc_map = {loc.id: loc for loc in (locations or [])}
 
-    visual = character_refs.build_scene_visual_prompt(
-        scene,
-        char_map,
-        loc_map,
-        with_ref=bool(ref_image and ref_image.is_file()),
-    )
+    env_scene = character_refs.is_environment_scene(scene)
+    if env_scene:
+        visual = character_refs.build_environment_prompt(scene, loc_map)
+        ref_image = None
+    else:
+        graph_hints = (
+            graph_context.get_scene_graph_hints(novel_name, scene) if novel_name else None
+        )
+        visual = character_refs.build_scene_visual_prompt(
+            scene,
+            char_map,
+            loc_map,
+            with_ref=bool(ref_image and ref_image.is_file()),
+            graph_hints=graph_hints,
+        )
     prefix = cfg.get("style_prefix", "").strip()
     suffix = cfg.get("style_suffix", "").strip()
     prompt = visual
@@ -172,6 +277,12 @@ def generate_scene_image_sync(
         prompt = f"{prefix} {prompt}"
     if suffix:
         prompt = f"{prompt}, {suffix}"
+
+    negative = cfg.get("negative_prompt", "")
+    if env_scene:
+        extra = cfg.get("environment_negative_suffix", "")
+        if extra:
+            negative = f"{negative}, {extra}" if negative else extra
 
     body = {
         "model": cfg.get("model", "qwen-image-2.0-pro-2026-04-22"),
@@ -184,15 +295,15 @@ def generate_scene_image_sync(
             ]
         },
         "parameters": {
-            "size": size_override or cfg.get("size", "1080*1920"),
+            "size": size_override or cfg.get("size", "1920*1080"),
             "n": 1,
             "watermark": cfg.get("watermark", False),
             "prompt_extend": cfg.get("prompt_extend", True),
-            "negative_prompt": cfg.get("negative_prompt", ""),
+            "negative_prompt": negative,
         },
     }
 
-    timeout = float(cfg.get("request_timeout_sec", 180))
+    timeout = _client_timeout(cfg, download=False)
     url = _generation_url(cfg["base_url"])
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -205,10 +316,9 @@ def generate_scene_image_sync(
         if not urls:
             raise RuntimeError(f"No image URL in Qwen response for {scene.id}")
 
-        img_resp = client.get(urls[0])
-        img_resp.raise_for_status()
+        content = _get_with_retry(client, urls[0], scene.id, cfg)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(img_resp.content)
+        output_path.write_bytes(content)
 
     return output_path
 
@@ -226,30 +336,47 @@ def _ensure_character_refs(
     *,
     after_api_call: bool,
 ) -> bool:
-    """Generate and persist ref.png per character under data/{小说名}/characters/."""
-    portrait_size = cfg.get("ref_portrait_size", "768*1152")
-    for char in characters:
-        ref_path = character_ref_path(novel_name, char.id)
-        if ref_path.is_file():
-            char.ref_image = str(ref_path)
-            continue
-        if after_api_call:
-            _sleep_interval(cfg, f"ref_{char.id}")
-            after_api_call = True
+    """Generate ref.png per character variant under data/{小说名}/characters/."""
+    from app.core.paths import character_variant_ref_path
 
-        ref_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.info("Qwen image: character ref portrait for %s (%s)", char.name, char.id)
-        scene = character_refs.portrait_scene(char)
-        generate_scene_image_sync(
-            scene,
-            ref_path,
-            characters=[char],
-            ref_image=None,
-            novel_name=novel_name,
-            size_override=portrait_size,
-        )
-        char.ref_image = str(ref_path)
-        after_api_call = True
+    portrait_size = cfg.get("ref_portrait_size", "768*1152")
+    for i, char in enumerate(characters):
+        char = character_refs.ensure_character_variants(char)
+        for vid, variant in char.variants.items():
+            ref_path = character_variant_ref_path(novel_name, char.id, vid)
+            if ref_path.is_file():
+                char.variants[vid] = variant.model_copy(update={"ref_image": to_storage_path(ref_path)})
+                continue
+            if after_api_call:
+                _sleep_interval(cfg, f"ref_{char.id}_{vid}")
+                after_api_call = True
+
+            ref_path.parent.mkdir(parents=True, exist_ok=True)
+            logger.info(
+                "Qwen image: character ref portrait for %s (%s, variant=%s)",
+                char.name,
+                char.id,
+                vid,
+            )
+            portrait_char = char.model_copy(
+                update={
+                    "appearance": variant.appearance,
+                    "age_group": variant.age_group or char.age_group,
+                    "ref_image": None,
+                }
+            )
+            scene = character_refs.portrait_scene(portrait_char, variant_id=vid)
+            generate_scene_image_sync(
+                scene,
+                ref_path,
+                characters=[char],
+                ref_image=None,
+                novel_name=novel_name,
+                size_override=portrait_size,
+            )
+            char.variants[vid] = variant.model_copy(update={"ref_image": to_storage_path(ref_path)})
+            after_api_call = True
+        characters[i] = character_refs.sync_character_top_level(char)
     return after_api_call
 
 
@@ -285,16 +412,27 @@ def generate_all_images_sync(
         had_api = True
 
         ref = None
-        if scene.character_ids and cfg.get("use_character_ref", True):
+        env_scene = character_refs.is_environment_scene(scene)
+        if (
+            not env_scene
+            and scene.character_ids
+            and cfg.get("use_character_ref", True)
+        ):
             ref = character_refs.pick_scene_ref_image(scene, char_map, novel_name)
 
         out = images_dir / f"{scene.id}.png"
+        if cfg.get("skip_existing_images", True) and out.is_file():
+            logger.info("Qwen image: skip %s (already exists)", scene.id)
+            scene.image_path = str(out)
+            updated.append(scene)
+            continue
+
         logger.info(
             "Qwen image: generating %s (%s/%s)%s",
             scene.id,
             index + 1,
             len(scenes),
-            " with ref" if ref else "",
+            " env" if env_scene else (" with ref" if ref else ""),
         )
         generate_scene_image_sync(
             scene,

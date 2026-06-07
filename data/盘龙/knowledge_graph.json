@@ -1,0 +1,130 @@
+{
+  "novel_name": "盘龙",
+  "characters": {
+    "char_1": {
+      "role": "protagonist",
+      "gender": "male",
+      "appearance_summary": "a young boy around six years old with short black hair, round face, lean child frame, wearing simple cloth clothes and leather boots",
+      "age_group": "child",
+      "name": "林雷",
+      "novel_name": "盘龙",
+      "id": "char_1"
+    },
+    "char_2": {
+      "role": "minor",
+      "gender": "male",
+      "appearance_summary": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
+      "age_group": "child",
+      "name": "哈德利",
+      "novel_name": "盘龙",
+      "id": "char_2"
+    },
+    "char_3": {
+      "role": "supporting",
+      "gender": "male",
+      "appearance_summary": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+      "age_group": "adult",
+      "name": "希尔曼",
+      "novel_name": "盘龙",
+      "id": "char_3"
+    },
+    "char_4": {
+      "role": "supporting",
+      "gender": "male",
+      "appearance_summary": "young adult male instructor, athletic build, short brown hair, wearing simple trainer's clothes, friendly expression",
+      "age_group": "adult",
+      "name": "罗瑞",
+      "novel_name": "盘龙",
+      "id": "char_4"
+    },
+    "char_5": {
+      "role": "supporting",
+      "gender": "male",
+      "appearance_summary": "young adult male instructor, fit build, serious expression, wearing trainer's clothes, observing children",
+      "age_group": "adult",
+      "name": "罗杰",
+      "novel_name": "盘龙",
+      "id": "char_5"
+    },
+    "char_6": {
+      "role": "supporting",
+      "appearance_summary": "希尔曼、罗瑞、罗杰，本集配角",
+      "name": "希尔曼、罗瑞、罗杰",
+      "novel_name": "盘龙",
+      "id": "char_6"
+    }
+  },
+  "locations": {
+    "loc_1": {
+      "name": "乌山镇训练场",
+      "description": "open outdoor training ground surrounded by wooden fences and distant mountains, early morning light casting soft golden hues, rows of children standing in formation on grassy earth",
+      "novel_name": "盘龙",
+      "id": "loc_1"
+    }
+  },
+  "episodes": {
+    "3": {
+      "summary": "希尔曼通过展示力量激发孩童训练热情，林雷在首次锻炼中展现出远超同龄人的毅力与资质。",
+      "number": 3,
+      "project_id": "盘龙/第03集",
+      "novel_name": "盘龙"
+    },
+    "99": {
+      "summary": "林雷在学院中偶遇希尔曼，对方挑衅其实力，两人言语交锋间埋下后续冲突伏笔。",
+      "number": 99,
+      "project_id": "盘龙/第99集",
+      "novel_name": "盘龙"
+    }
+  },
+  "scenes": [],
+  "relationships": [
+    {
+      "source_id": "char_1",
+      "target_id": "char_3",
+      "type": "master_apprentice",
+      "note": "希尔曼注意到林雷并对其表现赞赏，初步建立师徒关注关系",
+      "source_episode": 3,
+      "confidence": 0.7
+    },
+    {
+      "source_id": "char_3",
+      "target_id": "char_1",
+      "type": "enemy",
+      "note": "言语冲突，对立关系初现",
+      "source_episode": 99,
+      "confidence": 0.8
+    }
+  ],
+  "plot_events": [
+    {
+      "event_id": "evt_ep1_1",
+      "summary": "希尔曼展示力量震慑全场，激励孩童训练",
+      "episode": 3,
+      "order_in_episode": 1,
+      "character_ids": [
+        "char_3",
+        "char_1"
+      ]
+    },
+    {
+      "event_id": "evt_ep1_2",
+      "summary": "林雷在首次训练中坚持到最后梯队，引起教官注意",
+      "episode": 3,
+      "order_in_episode": 2,
+      "character_ids": [
+        "char_3",
+        "char_1"
+      ]
+    },
+    {
+      "event_id": "evt_ep1_3",
+      "summary": "希尔曼对林雷表现出认可与期待，埋下培养伏笔",
+      "episode": 3,
+      "order_in_episode": 3,
+      "character_ids": [
+        "char_3",
+        "char_1"
+      ]
+    }
+  ]
+}

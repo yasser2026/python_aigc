@@ -27,8 +27,8 @@ def create_mock_image(
     ffmpeg_cfg = load_config("ffmpeg")
     mock_cfg = app_cfg.get("mock_image", {})
 
-    w = ffmpeg_cfg.get("width", 1080)
-    h = ffmpeg_cfg.get("height", 1920)
+    w = ffmpeg_cfg.get("width", 1920)
+    h = ffmpeg_cfg.get("height", 1080)
     img = Image.new("RGB", (w, h), color=(18, 28, 48))
     draw = ImageDraw.Draw(img)
 
@@ -46,7 +46,8 @@ def create_mock_image(
     draw.text((margin, y), f"【{scene.id}】", fill=(180, 200, 230), font=title_font)
     y += mock_cfg.get("title_font_size", 40) + 24
 
-    wrapped = textwrap.fill(scene.narration, width=14)
+    wrap_cols = max(14, int(w / 80))
+    wrapped = textwrap.fill(scene.narration, width=wrap_cols)
     for line in wrapped.split("\n"):
         draw.text((margin, y), line, fill=(255, 255, 255), font=body_font)
         y += mock_cfg.get("body_font_size", 56) + 12

@@ -1,0 +1,14 @@
+﻿[Script Info]
+Title: scene_4
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,52,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,100,100,60,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:03.52,Default,,0,0,0,,希尔曼：希尔曼深吸一口气，肌肉暴起，
+Dialogue: 0,0:00:03.52,0:00:07.05,Default,,0,0,0,,一拳轰碎坚硬青石，裂纹四散炸开。

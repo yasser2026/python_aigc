@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config_loader import get_root, load_config
-from app.core.paths import sanitize_novel_dir
+from app.core.paths import sanitize_novel_dir, to_storage_path
 from app.services import embeddings
 
 logger = logging.getLogger(__name__)
@@ -61,63 +61,63 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb)
 
 
+def _escape_filter_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 class _MilvusBackend:
     def __init__(self) -> None:
-        self._collection = None
+        self._client = None
+        self._collection_name: str = ""
         self._ready = False
+
+    def _create_collection(self, client: Any, name: str, dim: int) -> None:
+        from pymilvus import DataType, MilvusClient
+
+        schema = MilvusClient.create_schema(auto_id=False, enable_dynamic_field=False)
+        schema.add_field(field_name="pk", datatype=DataType.VARCHAR, is_primary=True, max_length=256)
+        schema.add_field(field_name="novel_name", datatype=DataType.VARCHAR, max_length=200)
+        schema.add_field(field_name="entity_type", datatype=DataType.VARCHAR, max_length=32)
+        schema.add_field(field_name="entity_id", datatype=DataType.VARCHAR, max_length=64)
+        schema.add_field(field_name="name", datatype=DataType.VARCHAR, max_length=200)
+        schema.add_field(field_name="description", datatype=DataType.VARCHAR, max_length=4096)
+        schema.add_field(field_name="ref_image", datatype=DataType.VARCHAR, max_length=512)
+        schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=dim)
+
+        index_params = client.prepare_index_params()
+        index_params.add_index(
+            field_name="embedding",
+            index_type="AUTOINDEX",
+            metric_type="COSINE",
+        )
+        client.create_collection(
+            collection_name=name,
+            schema=schema,
+            index_params=index_params,
+        )
 
     def _ensure(self) -> bool:
         if self._ready:
-            return self._collection is not None
+            return self._client is not None
         cfg = _cfg()
         try:
-            from pymilvus import (
-                Collection,
-                CollectionSchema,
-                DataType,
-                FieldSchema,
-                connections,
-                utility,
-            )
+            from pymilvus import MilvusClient
 
             uri = cfg.get("uri", "http://127.0.0.1:19530")
-            connections.connect(alias="default", uri=uri)
+            self._client = MilvusClient(uri=uri)
             name = cfg.get("collection", "aigc_novel_entities")
             dim = int(cfg.get("dimension", 1024))
 
-            if not utility.has_collection(name):
-                fields = [
-                    FieldSchema(
-                        name="pk",
-                        dtype=DataType.VARCHAR,
-                        is_primary=True,
-                        max_length=256,
-                    ),
-                    FieldSchema(name="novel_name", dtype=DataType.VARCHAR, max_length=200),
-                    FieldSchema(name="entity_type", dtype=DataType.VARCHAR, max_length=32),
-                    FieldSchema(name="entity_id", dtype=DataType.VARCHAR, max_length=64),
-                    FieldSchema(name="name", dtype=DataType.VARCHAR, max_length=200),
-                    FieldSchema(name="description", dtype=DataType.VARCHAR, max_length=4096),
-                    FieldSchema(name="ref_image", dtype=DataType.VARCHAR, max_length=512),
-                    FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dim),
-                ]
-                schema = CollectionSchema(fields, description="AIGC novel entities")
-                self._collection = Collection(name, schema)
-                index_params = {
-                    "metric_type": "COSINE",
-                    "index_type": "AUTOINDEX",
-                    "params": {},
-                }
-                self._collection.create_index("embedding", index_params)
-            else:
-                self._collection = Collection(name)
-            self._collection.load()
+            if not self._client.has_collection(name):
+                self._create_collection(self._client, name, dim)
+
+            self._collection_name = name
             self._ready = True
             logger.info("Milvus connected: %s", name)
             return True
         except Exception as e:
             logger.warning("Milvus unavailable, using JSON fallback: %s", e)
-            self._collection = None
+            self._client = None
             self._ready = True
             return False
 
@@ -131,24 +131,25 @@ class _MilvusBackend:
         ref_image: str | None,
         vector: list[float],
     ) -> None:
-        if not self._ensure() or self._collection is None:
+        if not self._ensure() or self._client is None:
             return
         pk = _pk(novel_name, entity_type, entity_id)
         novel = sanitize_novel_dir(novel_name)
-        self._collection.delete(expr=f'pk == "{pk}"')
-        self._collection.insert(
-            [
-                [pk],
-                [novel],
-                [entity_type],
-                [entity_id],
-                [name[:200]],
-                [description[:4096]],
-                [(ref_image or "")[:512]],
-                [vector],
-            ]
+        self._client.upsert(
+            collection_name=self._collection_name,
+            data=[
+                {
+                    "pk": pk,
+                    "novel_name": novel,
+                    "entity_type": entity_type,
+                    "entity_id": entity_id,
+                    "name": name[:200],
+                    "description": description[:4096],
+                    "ref_image": (ref_image or "")[:512],
+                    "embedding": vector,
+                }
+            ],
         )
-        self._collection.flush()
 
     def search(
         self,
@@ -157,28 +158,31 @@ class _MilvusBackend:
         entity_type: str,
         top_k: int,
     ) -> list[dict[str, Any]]:
-        if not self._ensure() or self._collection is None:
+        if not self._ensure() or self._client is None:
             return []
-        novel = sanitize_novel_dir(novel_name)
-        expr = f'novel_name == "{novel}" && entity_type == "{entity_type}"'
-        results = self._collection.search(
+        novel = _escape_filter_value(sanitize_novel_dir(novel_name))
+        entity_type_esc = _escape_filter_value(entity_type)
+        expr = f'novel_name == "{novel}" && entity_type == "{entity_type_esc}"'
+        results = self._client.search(
+            collection_name=self._collection_name,
             data=[query_vector],
             anns_field="embedding",
-            param={"metric_type": "COSINE", "params": {}},
+            filter=expr,
             limit=top_k,
-            expr=expr,
             output_fields=["entity_id", "name", "description", "ref_image"],
+            search_params={"metric_type": "COSINE", "params": {}},
         )
         hits: list[dict[str, Any]] = []
         for group in results:
             for hit in group:
+                entity = hit.get("entity") if isinstance(hit.get("entity"), dict) else {}
                 hits.append(
                     {
-                        "entity_id": hit.entity.get("entity_id"),
-                        "name": hit.entity.get("name"),
-                        "description": hit.entity.get("description"),
-                        "ref_image": hit.entity.get("ref_image") or None,
-                        "score": float(hit.score),
+                        "entity_id": hit.get("entity_id") or entity.get("entity_id"),
+                        "name": hit.get("name") or entity.get("name"),
+                        "description": hit.get("description") or entity.get("description"),
+                        "ref_image": hit.get("ref_image") or entity.get("ref_image") or None,
+                        "score": float(hit.get("distance", hit.get("score", 0.0))),
                     }
                 )
         return hits
@@ -201,12 +205,17 @@ def upsert_entity(
     name: str,
     description: str,
     ref_image: str | None = None,
+    *,
+    variant_id: str | None = None,
 ) -> None:
     """Index character/location profile (Milvus + JSON fallback)."""
     if not description.strip():
         return
     text = f"{name}\n{description}"
-    pk = _pk(novel_name, entity_type, entity_id)
+    storage_id = entity_id
+    if variant_id and variant_id != "default" and "::" not in entity_id:
+        storage_id = f"{entity_id}::{variant_id}"
+    pk = _pk(novel_name, entity_type, storage_id)
 
     try:
         vector = embeddings.embed_texts([text], text_type="document")[0]
@@ -217,10 +226,10 @@ def upsert_entity(
     record = {
         "novel_name": sanitize_novel_dir(novel_name),
         "entity_type": entity_type,
-        "entity_id": entity_id,
+        "entity_id": storage_id,
         "name": name,
         "description": description,
-        "ref_image": ref_image,
+        "ref_image": to_storage_path(ref_image) if ref_image else None,
         "embedding": vector,
     }
     fb = _load_fallback()
@@ -231,7 +240,7 @@ def upsert_entity(
         return
     try:
         _get_backend().upsert(
-            novel_name, entity_type, entity_id, name, description, ref_image, vector
+            novel_name, entity_type, storage_id, name, description, ref_image, vector
         )
     except Exception as e:
         logger.warning("Milvus upsert failed for %s: %s", pk, e)

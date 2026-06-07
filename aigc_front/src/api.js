@@ -13,11 +13,33 @@ export async function fetchHealth() {
   return res.json();
 }
 
-export async function createProject({ novel_name, episode, text }) {
+export async function fetchNovelMeta(novelName) {
+  const name = encodeURIComponent(novelName.trim());
+  if (!name) return null;
+  const res = await fetch(`${API_BASE}/novels/${name}/meta`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function createProject({
+  novel_name,
+  episode,
+  text,
+  narrative_mode,
+  protagonist_name,
+  supporting_names,
+}) {
   const res = await fetch(`${API_BASE}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ novel_name, episode, text }),
+    body: JSON.stringify({
+      novel_name,
+      episode,
+      text,
+      narrative_mode: narrative_mode || "protagonist_focus",
+      protagonist_name: protagonist_name?.trim() || null,
+      supporting_names: supporting_names?.trim() || null,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

@@ -1,0 +1,49 @@
+{
+  "protagonist_id": "char_1",
+  "protagonist_ids": [
+    "char_1"
+  ],
+  "protagonist_name": "林雷",
+  "protagonist_names": [
+    "林雷"
+  ],
+  "protagonist_locked": true,
+  "narrative_mode_default": "protagonist_focus",
+  "characters": {
+    "char_1": {
+      "name": "林雷",
+      "aliases": [
+        "林雷巴鲁克"
+      ],
+      "role": "protagonist",
+      "gender": "male",
+      "age_group": "child"
+    },
+    "char_2": {
+      "name": "哈德利",
+      "aliases": [],
+      "role": "minor",
+      "gender": "male",
+      "age_group": "child"
+    },
+    "char_3": {
+      "name": "希尔曼",
+      "aliases": [],
+      "role": "supporting",
+      "gender": "male",
+      "age_group": "adult"
+    },
+    "char_4": {
+      "name": "罗瑞",
+      "role": "supporting",
+      "gender": "male",
+      "age_group": "adult"
+    },
+    "char_5": {
+      "name": "罗杰",
+      "role": "supporting",
+      "gender": "male",
+      "age_group": "adult"
+    }
+  }
+}

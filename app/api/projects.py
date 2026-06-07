@@ -18,8 +18,9 @@ from app.core.schemas import (
 )
 from app.core.paths import build_project_id, build_work_dir
 from app.pipeline.runner import run_pipeline
+from app.pipeline import state as pipeline_state
 from app.pipeline.task_store import task_store
-from app.services import comfyui_client, ffmpeg_motion
+from app.services import comfyui_client, ffmpeg_motion, knowledge_graph, novel_meta
 from app.services.image_provider import get_image_provider
 from app.services import vector_store
 
@@ -58,6 +59,8 @@ async def health() -> HealthResponse:
         comfyui_mock=comfy_mock,
         milvus=vector_store.ping(),
         vector_store_enabled=vector_store.is_enabled(),
+        neo4j=knowledge_graph.ping() if knowledge_graph.is_enabled() else False,
+        knowledge_graph_enabled=knowledge_graph.is_pipeline_enabled(),
     )
 
 
@@ -70,6 +73,19 @@ async def create_project(
     work_dir = build_work_dir(body.novel_name, body.episode)
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    protagonist_meta: dict | None = None
+    if body.protagonist_name and body.protagonist_name.strip():
+        try:
+            protagonist_meta = novel_meta.set_user_protagonist(
+                body.novel_name, body.protagonist_name.strip()
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
+    elif novel_meta.is_protagonist_locked(body.novel_name):
+        protagonist_meta = novel_meta.get_novel_meta_response(body.novel_name)
+
+    supporting_names = novel_meta.parse_character_names(body.supporting_names or "")
+
     record = task_store.create(
         project_id=project_id,
         novel_name=body.novel_name,
@@ -77,20 +93,74 @@ async def create_project(
         text=body.text,
         work_dir=str(work_dir),
         overrides=body.config_overrides,
+        narrative_mode=body.narrative_mode,
+        supporting_names=supporting_names,
     )
+    meta_payload = {
+        "novel_name": body.novel_name,
+        "episode": body.episode,
+        "project_id": project_id,
+        "narrative_mode": body.narrative_mode,
+    }
+    if body.protagonist_name and body.protagonist_name.strip():
+        meta_payload["protagonist_name"] = body.protagonist_name.strip()
+    if supporting_names:
+        meta_payload["supporting_names"] = supporting_names
+    if protagonist_meta:
+        meta_payload["protagonist_locked"] = protagonist_meta.get("protagonist_locked")
+        if protagonist_meta.get("protagonist_ids"):
+            meta_payload["protagonist_ids"] = protagonist_meta["protagonist_ids"]
+        if protagonist_meta.get("protagonist_names"):
+            meta_payload["protagonist_names"] = protagonist_meta["protagonist_names"]
+        if protagonist_meta.get("protagonist_id"):
+            meta_payload["protagonist_id"] = protagonist_meta["protagonist_id"]
+
+    fingerprint = pipeline_state.compute_input_fingerprint(
+        text=body.text,
+        narrative_mode=body.narrative_mode,
+        supporting_names=supporting_names,
+        novel_name=body.novel_name,
+    )
+    meta_payload["input_fingerprint"] = fingerprint
+
     (work_dir / "meta.json").write_text(
-        json.dumps(
-            {
-                "novel_name": body.novel_name,
-                "episode": body.episode,
-                "project_id": project_id,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
+        json.dumps(meta_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     (work_dir / "input.txt").write_text(body.text, encoding="utf-8")
+
+    cache_enabled = load_config("pipeline").get("cache", {}).get("enabled", True)
+    pstate = pipeline_state.load_or_reset_state(work_dir, fingerprint)
+    final_path = work_dir / "output" / "final.mp4"
+    already_done = (
+        cache_enabled
+        and pipeline_state.is_fully_complete(
+            work_dir, pstate, fingerprint, enabled=cache_enabled
+        )
+    )
+
+    if already_done:
+        task_store.update(
+            record.project_id,
+            status=ProjectStatus.DONE,
+            progress=100.0,
+            current_stage="done",
+            artifacts=ProjectArtifacts(
+                scenes_json=str(work_dir / "scenes.json"),
+                episode_analysis=str(work_dir / "episode_analysis.json")
+                if (work_dir / "episode_analysis.json").is_file()
+                else None,
+                output_video=str(final_path),
+                images_dir=str(work_dir / "images"),
+            ),
+        )
+        return CreateProjectResponse(
+            project_id=record.project_id,
+            novel_name=record.novel_name,
+            episode=record.episode,
+            work_dir=record.work_dir,
+            status=ProjectStatus.DONE,
+        )
 
     background_tasks.add_task(_run_async, record.project_id)
 

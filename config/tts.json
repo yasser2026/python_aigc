@@ -1,5 +1,27 @@
 {
   "voice": "zh-CN-XiaoxiaoNeural",
+  "narrator_voice": "zh-CN-YunxiNeural",
   "rate": "+0%",
-  "volume": "+0%"
+  "volume": "+0%",
+  "skip_existing_audio": true,
+  "retry": {
+    "max_attempts": 4,
+    "backoff_sec": [3, 8, 15]
+  },
+  "voice_by_profile": {
+    "male_adult": "zh-CN-YunxiNeural",
+    "male_child": "zh-CN-YunxiNeural",
+    "female_adult": "zh-CN-XiaoxiaoNeural",
+    "female_child": "zh-CN-XiaoyiNeural",
+    "unknown_adult": "zh-CN-YunxiNeural",
+    "unknown_child": "zh-CN-YunxiNeural",
+    "unknown_teen": "zh-CN-YunxiNeural",
+    "unknown_elder": "zh-CN-YunxiNeural",
+    "unknown_unknown": "zh-CN-YunxiNeural"
+  },
+  "voice_map": {},
+  "voice_fallback_chain": [
+    "zh-CN-YunxiNeural",
+    "zh-CN-XiaoxiaoNeural"
+  ]
 }

@@ -5,7 +5,7 @@
   "dimension": 1024,
   "embedding_model": "text-embedding-v3",
   "embedding_base_url": "https://dashscope.aliyuncs.com/api/v1",
-  "api_key": "${DASHSCOPE_API_KEY}",
+  "api_key": "sk-d4b1c89886554cbf84d7193aa0939601",
   "similarity_threshold": 0.72,
   "search_top_k": 3,
   "fallback_to_json": true

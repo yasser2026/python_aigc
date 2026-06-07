@@ -1,0 +1,16 @@
+{
+  "novel_name": "盘龙",
+  "episode": 3,
+  "project_id": "盘龙/第03集",
+  "narrative_mode": "protagonist_focus",
+  "protagonist_name": "林雷",
+  "protagonist_locked": true,
+  "protagonist_ids": [
+    "char_1"
+  ],
+  "protagonist_names": [
+    "林雷"
+  ],
+  "protagonist_id": "char_1",
+  "input_fingerprint": "8ab63b8a4259b84d8c087a9d1fcebd49cd03b7ed259c0b60d8831716c72362f4"
+}

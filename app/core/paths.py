@@ -38,9 +38,58 @@ def build_novel_dir(novel_name: str) -> Path:
     return get_root() / app_cfg.get("data_root", "data") / sanitize_novel_dir(novel_name)
 
 
+def to_storage_path(path: Path | str | None) -> str | None:
+    """Path relative to project root with forward slashes (Windows/Linux compatible)."""
+    if path is None:
+        return None
+    text = str(path).strip()
+    if not text:
+        return None
+    p = Path(text)
+    root = get_root().resolve()
+    if p.is_absolute():
+        try:
+            rel = p.resolve().relative_to(root)
+        except ValueError:
+            return text.replace("\\", "/")
+    else:
+        rel = Path(text.replace("\\", "/"))
+    return str(rel).replace("\\", "/")
+
+
+def resolve_storage_path(stored: str | Path | None) -> Path | None:
+    """Resolve project-relative storage path to an absolute Path."""
+    if stored is None:
+        return None
+    text = str(stored).strip()
+    if not text:
+        return None
+    p = Path(text)
+    if p.is_absolute():
+        return p
+    return (get_root() / p).resolve()
+
+
+def storage_path_is_file(stored: str | Path | None) -> bool:
+    resolved = resolve_storage_path(stored)
+    return bool(resolved and resolved.is_file())
+
+
 def character_ref_path(novel_name: str, character_id: str) -> Path:
-    """data/{小说名}/characters/{char_id}/ref.png"""
-    return build_novel_dir(novel_name) / "characters" / character_id / "ref.png"
+    """data/{小说名}/characters/{char_id}/ref.png — default variant."""
+    return character_variant_ref_path(novel_name, character_id, "default")
+
+
+def character_variant_ref_path(
+    novel_name: str,
+    character_id: str,
+    variant_id: str = "default",
+) -> Path:
+    """Default variant: characters/{id}/ref.png; others: characters/{id}/variants/{vid}/ref.png."""
+    base = build_novel_dir(novel_name) / "characters" / character_id
+    if variant_id == "default":
+        return base / "ref.png"
+    return base / "variants" / variant_id / "ref.png"
 
 
 def novel_characters_registry_path(novel_name: str) -> Path:
@@ -51,5 +100,14 @@ def novel_locations_registry_path(novel_name: str) -> Path:
     return build_novel_dir(novel_name) / "locations.json"
 
 
+def novel_meta_path(novel_name: str) -> Path:
+    return build_novel_dir(novel_name) / "novel_meta.json"
+
+
 def location_ref_path(novel_name: str, location_id: str) -> Path:
     return build_novel_dir(novel_name) / "locations" / location_id / "ref.png"
+
+
+def novel_knowledge_graph_path(novel_name: str) -> Path:
+    """data/{小说名}/knowledge_graph.json — Neo4j fallback + human-readable export."""
+    return build_novel_dir(novel_name) / "knowledge_graph.json"

@@ -24,8 +24,8 @@ async def image_to_clip(
 
     cfg = load_config("ffmpeg")
     pipeline = load_config("pipeline")
-    w = cfg.get("width", 1080)
-    h = cfg.get("height", 1920)
+    w = cfg.get("width", 1920)
+    h = cfg.get("height", 1080)
     fps = cfg.get("fps", 24)
     kb = cfg.get("ken_burns", {})
     codec = cfg.get("codec", "libx264")

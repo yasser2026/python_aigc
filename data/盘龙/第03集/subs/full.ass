@@ -1,0 +1,31 @@
+﻿[Script Info]
+Title: full
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Microsoft YaHei,52,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,100,100,60,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:05.25,Default,,0,0,0,,希尔曼看着孩子们炽热的目光，嘴角浮现一丝满意笑意。
+Dialogue: 0,0:00:05.25,0:00:08.69,Default,,0,0,0,,希尔曼：他走到巨型石锁前，
+Dialogue: 0,0:00:08.69,0:00:12.14,Default,,0,0,0,,单手轻松挥舞起三四百斤的重物，如同挥动木棍。
+Dialogue: 0,0:00:12.14,0:00:15.71,Default,,0,0,0,,石锁被甩出十几米远，轰然砸断树根，地面震颤，
+Dialogue: 0,0:00:15.71,0:00:19.29,Default,,0,0,0,,孩子们震惊张望。
+Dialogue: 0,0:00:19.29,0:00:22.82,Default,,0,0,0,,希尔曼：希尔曼深吸一口气，肌肉暴起，
+Dialogue: 0,0:00:22.82,0:00:26.35,Default,,0,0,0,,一拳轰碎坚硬青石，裂纹四散炸开。
+Dialogue: 0,0:00:26.35,0:00:29.57,Default,,0,0,0,,希尔曼：罗瑞与罗杰走近称赞，其他孩子眼中满是崇拜，
+Dialogue: 0,0:00:29.57,0:00:32.80,Default,,0,0,0,,训练场上气氛肃然。
+Dialogue: 0,0:00:32.80,0:00:35.50,Default,,0,0,0,,希尔曼：希尔曼冷厉训话：不能成为战士的男人，
+Dialogue: 0,0:00:35.50,0:00:38.20,Default,,0,0,0,,不配称为男人。
+Dialogue: 0,0:00:38.20,0:00:41.08,Default,,0,0,0,,林雷：孩子们咬牙坚持‘蕴气式’站桩，
+Dialogue: 0,0:00:41.08,0:00:43.96,Default,,0,0,0,,双腿颤抖却强忍不倒。
+Dialogue: 0,0:00:43.96,0:00:49.51,Default,,0,0,0,,林雷：中央团队陆续倒下，唯有北边六岁少年仍在坚持。
+Dialogue: 0,0:00:49.51,0:00:54.38,Default,,0,0,0,,罗瑞：罗瑞惊讶指出：那是林雷，今天第一次训练。
+Dialogue: 0,0:00:54.38,0:00:57.46,Default,,0,0,0,,希尔曼：希尔曼目光锁定林雷，
+Dialogue: 0,0:00:57.46,0:01:00.55,Default,,0,0,0,,眼中闪过惊喜——年仅六岁竟有如此资质。
+Dialogue: 0,0:01:00.55,0:01:04.35,Default,,0,0,0,,林雷：林雷双拳紧握，指节发白，眼神坚定如铁，
+Dialogue: 0,0:01:04.35,0:01:08.15,Default,,0,0,0,,直至体力耗尽才缓缓坐下。

@@ -59,11 +59,15 @@ async def burn_subtitles(
     fonts_escaped = Path(fonts_dir).resolve().as_posix().replace(":", "\\:")
 
     font_name = sub.get("font_name", "Microsoft YaHei")
-    font_size = sub.get("font_size", 72)
-    outline = sub.get("outline", 4)
+    font_size = sub.get("font_size", 52)
+    outline = sub.get("outline", 3)
+    margin_v = sub.get("margin_v", 60)
+    margin_l = sub.get("margin_l", 100)
+    margin_r = sub.get("margin_r", 100)
     force = (
         f"Fontname={font_name},Fontsize={font_size},"
-        f"Outline={outline},Bold=1,Alignment=2,MarginV={sub.get('margin_v', 120)}"
+        f"Outline={outline},Bold=1,Alignment=2,"
+        f"MarginV={margin_v},MarginL={margin_l},MarginR={margin_r}"
     )
     vf = f"subtitles='{ass_escaped}':fontsdir='{fonts_escaped}':force_style='{force}'"
 

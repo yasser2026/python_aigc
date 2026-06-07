@@ -1,0 +1,444 @@
+{
+  "characters": [
+    {
+      "id": "char_1",
+      "name": "林雷",
+      "appearance": "a young boy around six years old with short black hair, round face, lean child frame, wearing simple cloth clothes and leather boots",
+      "ref_image": "data/盘龙/characters/char_1/ref.png",
+      "role": "protagonist",
+      "gender": "male",
+      "age_group": "child",
+      "aliases": [
+        "林雷巴鲁克"
+      ],
+      "default_variant_id": "default",
+      "variants": {
+        "default": {
+          "variant_id": "default",
+          "label": null,
+          "appearance": "a young boy around six years old with short black hair, round face, lean child frame, wearing simple cloth clothes and leather boots",
+          "age_group": "child",
+          "ref_image": "data/盘龙/characters/char_1/ref.png",
+          "aliases": [
+            "林雷巴鲁克"
+          ]
+        }
+      }
+    },
+    {
+      "id": "char_2",
+      "name": "哈德利",
+      "appearance": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
+      "ref_image": "data/盘龙/characters/char_2/ref.png",
+      "role": "minor",
+      "gender": "male",
+      "age_group": "child",
+      "aliases": [],
+      "default_variant_id": "default",
+      "variants": {
+        "default": {
+          "variant_id": "default",
+          "label": null,
+          "appearance": "young blond boy around six years old, large curious eyes, small frame, wearing simple cloth training clothes",
+          "age_group": "child",
+          "ref_image": "data/盘龙/characters/char_2/ref.png",
+          "aliases": []
+        }
+      }
+    },
+    {
+      "id": "char_3",
+      "name": "希尔曼",
+      "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+      "ref_image": "data/盘龙/characters/char_3/ref.png",
+      "role": "supporting",
+      "gender": "male",
+      "age_group": "adult",
+      "aliases": [],
+      "default_variant_id": "default",
+      "variants": {
+        "default": {
+          "variant_id": "default",
+          "label": null,
+          "appearance": "middle-aged man with broad shoulders and defined muscles, short black hair with streaks of gray, stern eyes, numerous scars on his bare torso from blades and swords",
+          "age_group": "adult",
+          "ref_image": "data/盘龙/characters/char_3/ref.png",
+          "aliases": []
+        }
+      }
+    },
+    {
+      "id": "char_4",
+      "name": "罗瑞",
+      "appearance": "young adult male instructor, athletic build, short brown hair, wearing simple trainer's clothes, friendly expression",
+      "ref_image": "data/盘龙/characters/char_4/ref.png",
+      "role": "supporting",
+      "gender": "male",
+      "age_group": "adult",
+      "aliases": [],
+      "default_variant_id": "default",
+      "variants": {
+        "default": {
+          "variant_id": "default",
+          "label": null,
+          "appearance": "young adult male instructor, athletic build, short brown hair, wearing simple trainer's clothes, friendly expression",
+          "age_group": "adult",
+          "ref_image": "data/盘龙/characters/char_4/ref.png",
+          "aliases": []
+        }
+      }
+    },
+    {
+      "id": "char_5",
+      "name": "罗杰",
+      "appearance": "young adult male instructor, fit build, serious expression, wearing trainer's clothes, observing children",
+      "ref_image": "data/盘龙/characters/char_5/ref.png",
+      "role": "supporting",
+      "gender": "male",
+      "age_group": "adult",
+      "aliases": [],
+      "default_variant_id": "default",
+      "variants": {
+        "default": {
+          "variant_id": "default",
+          "label": null,
+          "appearance": "young adult male instructor, fit build, serious expression, wearing trainer's clothes, observing children",
+          "age_group": "adult",
+          "ref_image": "data/盘龙/characters/char_5/ref.png",
+          "aliases": []
+        }
+      }
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc_1",
+      "name": "乌山镇训练场",
+      "description": "open outdoor training ground surrounded by wooden fences and distant mountains, early morning light casting soft golden hues, rows of children standing in formation on grassy earth",
+      "ref_image": null
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "narration": "希尔曼看着孩子们炽热的目光，嘴角浮现一丝满意笑意。",
+      "visual_prompt": "wide view of the outdoor training ground at dawn, children in neat rows practicing breathing stances, sunlight filtering through trees casting soft shadows",
+      "character_ids": [],
+      "location_id": "loc_1",
+      "shot_type": "wide",
+      "narration_speaker_id": null,
+      "narration_type": "narrator",
+      "scene_type": "environment",
+      "focus_character_ids": [],
+      "character_variants": {},
+      "duration_sec": 5.256,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_1.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_1.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_1.mp4"
+    },
+    {
+      "id": "scene_2",
+      "narration": "他走到巨型石锁前，单手轻松挥舞起三四百斤的重物，如同挥动木棍。",
+      "visual_prompt": "medium shot of Xilman standing beside a massive stone lock, gripping it one-handed and swinging it effortlessly through the air, dust rising from impact",
+      "character_ids": [
+        "char_3"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "narration_speaker_id": "char_3",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_3"
+      ],
+      "character_variants": {
+        "char_3": "default"
+      },
+      "duration_sec": 6.888,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_2.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_2.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_2.mp4"
+    },
+    {
+      "id": "scene_3",
+      "narration": "石锁被甩出十几米远，轰然砸断树根，地面震颤，孩子们震惊张望。",
+      "visual_prompt": "low angle shot showing the stone lock flying mid-air and crashing beside a thick tree trunk, shaking leaves loose and sending vibrations across the dirt ground",
+      "character_ids": [],
+      "location_id": "loc_1",
+      "shot_type": "wide",
+      "narration_speaker_id": null,
+      "narration_type": "narrator",
+      "scene_type": "environment",
+      "focus_character_ids": [],
+      "character_variants": {},
+      "duration_sec": 7.152,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_3.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_3.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_3.mp4"
+    },
+    {
+      "id": "scene_4",
+      "narration": "希尔曼深吸一口气，肌肉暴起，一拳轰碎坚硬青石，裂纹四散炸开。",
+      "visual_prompt": "close-up of Xilman’s fist breaking through a solid greenish stone, cracks spreading rapidly before explosion into fragments, wind blowing nearby grass",
+      "character_ids": [
+        "char_3"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "closeup",
+      "narration_speaker_id": "char_3",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_3"
+      ],
+      "character_variants": {
+        "char_3": "default"
+      },
+      "duration_sec": 7.056,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_4.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_4.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_4.mp4"
+    },
+    {
+      "id": "scene_5",
+      "narration": "罗瑞与罗杰走近称赞，其他孩子眼中满是崇拜，训练场上气氛肃然。",
+      "visual_prompt": "group shot of two instructors walking toward Xilman, children watching silently with wide eyes, some whispering among themselves in awe",
+      "character_ids": [
+        "char_3",
+        "char_4",
+        "char_5"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "narration_speaker_id": "char_3",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_3"
+      ],
+      "character_variants": {
+        "char_3": "default",
+        "char_4": "default",
+        "char_5": "default"
+      },
+      "duration_sec": 6.456,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_5.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_5.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_5.mp4"
+    },
+    {
+      "id": "scene_6",
+      "narration": "希尔曼冷厉训话：不能成为战士的男人，不配称为男人。",
+      "visual_prompt": "tight medium shot of Xilman facing a line of children, mouth moving firmly, sunlight highlighting facial scars and stern expression",
+      "character_ids": [
+        "char_3"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "narration_speaker_id": "char_3",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_3"
+      ],
+      "character_variants": {
+        "char_3": "default"
+      },
+      "duration_sec": 5.4,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_6.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_6.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_6.mp4"
+    },
+    {
+      "id": "scene_7",
+      "narration": "孩子们咬牙坚持‘蕴气式’站桩，双腿颤抖却强忍不倒。",
+      "visual_prompt": "low-angle wide shot of multiple groups of children standing rigidly, legs shaking, sweat dripping, some swaying unsteadily under morning sun",
+      "character_ids": [
+        "char_1",
+        "char_2"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "wide",
+      "narration_speaker_id": "char_1",
+      "narration_type": "dialogue",
+      "scene_type": "crowd",
+      "focus_character_ids": [
+        "char_1"
+      ],
+      "character_variants": {
+        "char_1": "default",
+        "char_2": "default"
+      },
+      "duration_sec": 5.76,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_7.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_7.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_7.mp4"
+    },
+    {
+      "id": "scene_8",
+      "narration": "中央团队陆续倒下，唯有北边六岁少年仍在坚持。",
+      "visual_prompt": "side profile split view: left side shows older children collapsing one by one; right side focuses on a lone young boy still standing upright",
+      "character_ids": [
+        "char_1",
+        "char_2",
+        "char_5"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "narration_speaker_id": "char_1",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_1"
+      ],
+      "character_variants": {
+        "char_1": "default",
+        "char_2": "default",
+        "char_5": "default"
+      },
+      "duration_sec": 5.544,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_8.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_8.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_8.mp4"
+    },
+    {
+      "id": "scene_9",
+      "narration": "罗瑞惊讶指出：那是林雷，今天第一次训练。",
+      "visual_prompt": "three adult instructors turning their heads northward, pointing and discussing, expressions shifting from calm to surprise",
+      "character_ids": [
+        "char_3",
+        "char_4",
+        "char_5",
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "medium",
+      "narration_speaker_id": "char_4",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_4"
+      ],
+      "character_variants": {
+        "char_3": "default",
+        "char_4": "default",
+        "char_5": "default",
+        "char_1": "default"
+      },
+      "duration_sec": 4.872,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_9.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_9.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_9.mp4"
+    },
+    {
+      "id": "scene_10",
+      "narration": "希尔曼目光锁定林雷，眼中闪过惊喜——年仅六岁竟有如此资质。",
+      "visual_prompt": "extreme close-up of Xilman’s eyes narrowing slightly, then widening with subtle admiration as he stares at a distant small figure",
+      "character_ids": [
+        "char_3",
+        "char_1"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "closeup",
+      "narration_speaker_id": "char_3",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_3"
+      ],
+      "character_variants": {
+        "char_3": "default",
+        "char_1": "default"
+      },
+      "duration_sec": 6.168,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_10.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_10.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_10.mp4"
+    },
+    {
+      "id": "scene_11",
+      "narration": "林雷双拳紧握，指节发白，眼神坚定如铁，直至体力耗尽才缓缓坐下。",
+      "visual_prompt": "slow-motion shot of a young boy trembling violently, fists clenched tightly, lips pressed together, then slowly lowering into a seated position",
+      "character_ids": [
+        "char_1",
+        "char_5",
+        "char_2"
+      ],
+      "location_id": "loc_1",
+      "shot_type": "closeup",
+      "narration_speaker_id": "char_1",
+      "narration_type": "dialogue",
+      "scene_type": "character",
+      "focus_character_ids": [
+        "char_1"
+      ],
+      "character_variants": {
+        "char_1": "default",
+        "char_5": "default",
+        "char_2": "default"
+      },
+      "duration_sec": 7.608,
+      "image_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\images\\scene_11.png",
+      "audio_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\audio\\scene_11.mp3",
+      "clip_path": "D:\\code\\python\\python_agic\\data\\盘龙\\第03集\\clips\\scene_11.mp4"
+    }
+  ],
+  "episode_analysis": {
+    "book_protagonist_id": "char_1",
+    "fragment_focus_ids": [
+      "char_3",
+      "char_1"
+    ],
+    "fragment_summary": "希尔曼通过展示力量激发孩童训练热情，林雷在首次锻炼中展现出远超同龄人的毅力与资质。",
+    "role_notes": {
+      "char_1": "全书主角，本段叙事中心之一，首次登场展现潜力",
+      "char_3": "本段主要推动者，通过示范与训话主导情节发展",
+      "char_2": "配角，背景孩童之一，无独立戏份",
+      "char_4": "指导者之一，辅助角色",
+      "char_5": "指导者之一，辅助角色"
+    },
+    "episode_supporting_names": []
+  },
+  "graph_delta": {
+    "relationships": [
+      {
+        "source_id": "char_1",
+        "target_id": "char_3",
+        "type": "master_apprentice",
+        "note": "希尔曼注意到林雷并对其表现赞赏，初步建立师徒关注关系",
+        "bidirectional": false,
+        "confidence": 0.7
+      }
+    ],
+    "plot_events": [
+      {
+        "event_id": "evt_ep1_1",
+        "summary": "希尔曼展示力量震慑全场，激励孩童训练",
+        "character_ids": [
+          "char_3"
+        ],
+        "location_id": "loc_1",
+        "order": 1
+      },
+      {
+        "event_id": "evt_ep1_2",
+        "summary": "林雷在首次训练中坚持到最后梯队，引起教官注意",
+        "character_ids": [
+          "char_1"
+        ],
+        "location_id": "loc_1",
+        "order": 2
+      },
+      {
+        "event_id": "evt_ep1_3",
+        "summary": "希尔曼对林雷表现出认可与期待，埋下培养伏笔",
+        "character_ids": [
+          "char_1",
+          "char_3"
+        ],
+        "location_id": "loc_1",
+        "order": 3
+      }
+    ]
+  }
+}

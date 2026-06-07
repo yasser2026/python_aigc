@@ -1,0 +1,9 @@
+{
+  "protagonist_names": [
+    "张三",
+    "李四"
+  ],
+  "protagonist_name": "张三；李四",
+  "protagonist_locked": true,
+  "narrative_mode_default": "protagonist_focus"
+}
