@@ -6,3 +6,4 @@ logs/
 run/
 debug-*.log
 *.log
+autodl_end/zip/
