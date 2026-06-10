@@ -18,7 +18,7 @@
 
 1. 实例
    - GPU：2 × RTX 4090 24G（或 2×24G）
-   - 数据盘：50G 可跑 1.3B + 出图 + TTS（无对口型）；要 14B 角色镜建议 80～100G
+   - 数据盘：建议 50～80G（I2V-14B-480P + 出图 + TTS；后续换 720P 建议 80～100G）
    - 镜像：PyTorch 2.4/2.5 + Python 3.10/3.11 + CUDA 12.x
 
 2. 开机后检查
@@ -68,16 +68,17 @@ CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
 3. 模型目录（建议软链到数据盘）
    # ① 在数据盘建模型目录
    cd /root/autodl-tmp/comfyui
-   mkdir -p /root/autodl-tmp/models/{checkpoints,clip,vae,controlnet,ipadapter,loras,wan}
+   mkdir -p /root/autodl-tmp/models/{checkpoints,clip,clip_vision,vae,controlnet,ipadapter,loras,wan}
 
    # ② 进入 ComfyUI 再建软链（必须在 comfyui 目录下执行，否则会报 No such file or directory）
    cd /root/autodl-tmp/comfyui
    mkdir -p models
-   ln -sf /root/autodl-tmp/models/checkpoints  models/checkpoints
-   ln -sf /root/autodl-tmp/models/clip         models/clip
-   ln -sf /root/autodl-tmp/models/vae          models/vae
-   ln -sf /root/autodl-tmp/models/ipadapter    models/ipadapter
-   ln -sf /root/autodl-tmp/models/wan          models/diffusion_models
+   ln -sf /root/autodl-tmp/models/checkpoints   models/checkpoints
+   ln -sf /root/autodl-tmp/models/clip           models/clip
+   ln -sf /root/autodl-tmp/models/clip_vision     models/clip_vision
+   ln -sf /root/autodl-tmp/models/vae            models/vae
+   ln -sf /root/autodl-tmp/models/ipadapter      models/ipadapter
+   ln -sf /root/autodl-tmp/models/wan            models/diffusion_models
 
    # 验证（应看到 -> /root/autodl-tmp/models/...）
    ls -la models/
@@ -96,29 +97,68 @@ CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
 
    ── 方式 A：AutoDL 模型库（最省事）──
    控制台 → 模型库 / 社区模型，搜索并下载到数据盘，例如：
-     「SD1.5 动漫」「IP-Adapter」「Wan2.1 I2V」
+     「SD1.5 动漫」「IP-Adapter」「Wan2.1 I2V 480P」
    下载完成后把文件移动到下面各目录（或挂载到 /root/autodl-tmp/models）
 
-   ── 方式 B：HuggingFace（需镜像时加 hf 镜像前缀）──
+   ── 方式 B：ModelScope / HuggingFace ──
+   pip install modelscope
+   # 或：pip install -U huggingface_hub && export HF_ENDPOINT=https://hf-mirror.com
+
+   ═══════════════════════════════════════════════════════
+   4.1 出图：SD1.5 + IP-Adapter（约 10～15G）
+   ═══════════════════════════════════════════════════════
+
+   先确认第 3 步软链已建好，文件落到 /root/autodl-tmp/models/ 对应子目录。
+
+   | 放哪 | 文件名 | 约大小 | 作用 |
+   |------|--------|--------|------|
+   | models/checkpoints/ | *.safetensors（动漫 SD1.5 底模） | ~2～4G | 出图主模型 |
+   | models/vae/ | vae-ft-mse-840000-ema-pruned.safetensors | ~0.3G | 解码出图 |
+   | models/clip_vision/ | CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors | ~2.5G | IP-Adapter 读参考图 |
+   | models/ipadapter/ | ip-adapter-plus_sd15.safetensors | ~0.1G | 角色脸/风格一致 |
+
+   ── 方式 A：AutoDL 模型库（推荐，不用命令行）──
+   控制台 → 模型库，分别搜索下载到数据盘后挪到上表目录：
+     「SD1.5」「vae-ft-mse」「IP-Adapter」「CLIP ViT-H」或「anything 动漫」
+   下完执行：ls /root/autodl-tmp/models/checkpoints/ 等，确认非空。
+
+   ── 方式 B：命令行（HF 镜像，适合 VAE / IP-Adapter / CLIP）──
+   export HF_ENDPOINT=https://hf-mirror.com
    pip install -U huggingface_hub
-   # 示例：只下 Wan 1.3B（目录名以你装的 Wan 节点 README 为准）
-   huggingface-cli download Wan-AI/Wan2.1-I2V-1.3B --local-dir /root/autodl-tmp/models/wan/Wan2.1-I2V-1.3B
 
-   ═══════════════════════════════════════════════════════
-   4.1 出图：SD1.5 + IP-Adapter（50G 盘推荐，体积小）
-   ═══════════════════════════════════════════════════════
+   # 1) VAE
+   hf download stabilityai/sd-vae-ft-mse-original \
+     vae-ft-mse-840000-ema-pruned.safetensors \
+     --local-dir /root/autodl-tmp/models/vae
 
-   | 放哪 | 文件名示例 | 约大小 | 说明 |
-   |------|------------|--------|------|
-   | models/checkpoints/ | anything-v5-PrtRE.safetensors 或同类动漫 SD1.5 | ~2～4G | 任选一个动漫向 SD1.5 即可 |
-   | models/vae/ | vae-ft-mse-840000-ema-pruned.safetensors | ~0.3G | SD1.5 常用 VAE |
-   | models/clip/ 或 clip_vision/ | CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors | ~2.5G | IP-Adapter 用；若节点报找不到，改放 models/clip_vision/ |
-   | models/ipadapter/ | ip-adapter-plus_sd15.safetensors | ~0.1G | 角色参考图一致 |
-   | models/ipadapter/ | ip-adapter-plus-face_sd15.safetensors | 可选 | 更重脸部一致时可加 |
+   # 2) IP-Adapter 权重
+   hf download h94/IP-Adapter ip-adapter-plus_sd15.safetensors \
+     --local-dir /root/autodl-tmp/models/ipadapter
 
-   验证：ComfyUI 网页 → Add Node → 搜 IPAdapter，Load IPAdapter Model 列表里能看到权重。
+   # 3) CLIP Vision（IP-Adapter 图像编码器，需重命名）
+   hf download h94/IP-Adapter models/image_encoder/model.safetensors \
+     --local-dir /tmp/ipadapter_clip
+   cp /tmp/ipadapter_clip/models/image_encoder/model.safetensors \
+     /root/autodl-tmp/models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors
 
-   若改用 SDXL：底模放 checkpoints/（~6G），IP-Adapter 换 sdxl 版，VAE 换 sdxl_vae。
+   # 4) 底模 checkpoint（动漫向，任选其一）
+   #    动漫模型 Civitai/模型库较多，HF 可用下面作测试（偏写实，后续可换动漫底模）：
+   hf download stable-diffusion-v1-5/stable-diffusion-v1-5 \
+     v1-5-pruned-emaonly.safetensors \
+     --local-dir /root/autodl-tmp/models/checkpoints
+   # 或 ModelScope 搜动漫 checkpoint，下载 .safetensors 放进 checkpoints/
+
+   ── 方式 C：ModelScope 下底模（动漫示例）──
+   pip install modelscope
+   # 在 modelscope.cn 搜「Anything」「Counterfeit」「动漫 SD1.5」，按页面命令下到 checkpoints/
+
+   自检：
+     du -sh /root/autodl-tmp/models/{checkpoints,vae,clip_vision,ipadapter}
+
+   验证：启动 ComfyUI → Add Node → IPAdapter → Load IPAdapter Model / Load CLIP Vision
+         列表里能看到 ip-adapter-plus_sd15；用 IP-Adapter 工作流 + 参考图能出图即成功。
+
+   若改用 SDXL：底模 ~6G 放 checkpoints/，IP-Adapter 换 sdxl 版，VAE 换 sdxl_vae，CLIP 换 sdxl 对应文件。
 
    ═══════════════════════════════════════════════════════
    4.2 动画：Wan2.1 I2V
@@ -132,26 +172,37 @@ CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
 
    权重目录：/root/autodl-tmp/models/wan/（已软链到 models/diffusion_models）
 
-   | 档位 | HuggingFace 仓库 | 约大小 | 用途 |
-   |------|------------------|--------|------|
-   | 1.3B（必装） | Wan-AI/Wan2.1-I2V-1.3B | ~8～15G | 环境/群像/默认动画，480×854 |
-   | 14B（可选） | Wan-AI/Wan2.1-I2V-14B | ~25～40G | 角色镜高清 720×1280；50G 盘可先不装 |
+   说明：Wan 官方 I2V 仅有 14B，无 I2V-1.3B；T2V-1.3B 是文生视频，不能用于本项目的图生动画。
 
-   下载示例（1.3B）：
-     huggingface-cli download Wan-AI/Wan2.1-I2V-1.3B \
-       --local-dir /root/autodl-tmp/models/wan/Wan2.1-I2V-1.3B
+   | 档位 | 仓库（ModelScope / HF 同名） | 约大小 | 用途 |
+   |------|------------------------------|--------|------|
+   | I2V-14B-480P（本方案必装，先跑通） | Wan-AI/Wan2.1-I2V-14B-480P | ~25～35G | 图生视频 480×854，所有动画镜 |
 
-   验证：ComfyUI 里 Load 官方/教程 Wan I2V 工作流，选 1.3B 权重，输入一张图能出短视频。
+   下载（推荐 ModelScope，国内 AutoDL 更稳）：
+     mkdir -p /root/autodl-tmp/models/wan
+     pip install modelscope
+     后台下载
+    nohup modelscope download Wan-AI/Wan2.1-I2V-14B-480P \
+  --local_dir /root/autodl-tmp/models/wan/Wan2.1-I2V-14B-480P \
+  > /root/autodl-tmp/download_wan.log 2>&1 &
+
+
+
+   验证：ComfyUI 里 Load Wan I2V 工作流，选 I2V-14B-480P 权重，输入一张图能出 480P 短视频。
+
+   后续升级高清（可选）：
+     再下 Wan-AI/Wan2.1-I2V-14B-720P（~30～40G），改 config/wan_i2v.json 的 high 档与 default_tier
 
    ═══════════════════════════════════════════════════════
-   4.3 50G 盘最小套装 vs 加 14B
+   4.3 数据盘容量估算
    ═══════════════════════════════════════════════════════
 
-   50G 最小（先跑通）：
-     checkpoints 1 个 + vae + clip + ip-adapter-plus + Wan 1.3B  ≈ 15～25G
-     另留 GPT-SoVITS（第二节）≈ 8G，余量给日志/临时文件
-
-   要角色高清镜：再加 Wan 14B，数据盘建议扩到 80～100G
+   本方案（I2V-14B-480P + 出图 + TTS）：
+     checkpoints + vae + clip + ip-adapter  ≈ 10～15G
+     Wan2.1-I2V-14B-480P                      ≈ 25～35G
+     GPT-SoVITS 预训练                         ≈ 8G
+     合计建议数据盘                             50～80G（50G 可试跑，略紧）
+   
 
    ═══════════════════════════════════════════════════════
    4.4 下载后自检
@@ -266,9 +317,9 @@ CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
    motion_clips      Wan I2V               GPU0
    assemble          FFmpeg（本机 CPU）    -
 
-   所有动画镜（含对白/角色/环境/群像）→ Wan I2V；失败降级 Ken Burns
-   环境/群像镜       → Wan I2V 默认 1.3B 低清档（480×854）
-   角色镜            → Wan 可选 14B 高清档（720×1280，24G 单卡内换模型）
+   所有动画镜（含对白/角色/环境/群像）→ Wan I2V-14B-480P（480×854）；失败降级 Ken Burns
+   环境/群像镜       → default_tier: low
+   角色镜            → 暂同 480P（后续可换 720P 模型并改 wan_i2v.json high 档）
    对白镜            → Wan I2V + TTS 音轨合成，无对口型（嘴型不驱动）
 
    config/app.anime.json：max_concurrent_projects=1（单任务串行，适合 24G）
@@ -326,14 +377,17 @@ CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
    → 检查 data_anime/.../voice_ref.wav 与 remote_ref_audio_dir 同步
 
 4. OOM 显存不足
-   → Wan 14B 改用 1.3B 低清档（config/wan_i2v.json default_tier: low）
+   → 减少 wan_i2v 单镜时长 / 帧数；或 ComfyUI 工作流里降 steps
    → 确保 ComfyUI 只在 GPU0，GPT-SoVITS 只在 GPU1
 
-5. 对白镜没有口型
+5. 升级 720P 高清动画
+   → 下 Wan-AI/Wan2.1-I2V-14B-720P，改 config/wan_i2v.json high 档 model 与分辨率，default_tier 可改 high
+
+6. 对白镜没有口型
    → 本方案不部署 InfiniteTalk；对白镜走 Wan I2V + TTS，属预期行为
    → 若需对口型，需另装 InfiniteTalk 节点/权重并改 pipeline.anime.json talk.enabled
 
-6. 仅「生成视频」、不需要 GPU
+7. 仅「生成视频」、不需要 GPU
    → video 模式用 Qwen API + Edge TTS，本机 CPU 即可，无需 AutoDL
 
 ================================================================================

@@ -6,8 +6,8 @@
   "poll_timeout_sec": 900,
   "fps": 16,
   "resolution_tiers": {
-    "high": { "width": 720, "height": 1280, "model": "14B" },
-    "low": { "width": 480, "height": 854, "model": "1.3B" }
+    "high": { "width": 480, "height": 854, "model": "I2V-14B-480P" },
+    "low": { "width": 480, "height": 854, "model": "I2V-14B-480P" }
   },
   "default_tier": "low",
   "high_tier_scene_types": ["character"],
