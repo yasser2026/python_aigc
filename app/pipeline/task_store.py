@@ -15,6 +15,7 @@ class ProjectRecord:
     novel_name: str
     episode: int
     text: str
+    mode: str = "video"
     narrative_mode: NarrativeMode = "protagonist_focus"
     supporting_names: list[str] = field(default_factory=list)
     status: ProjectStatus = ProjectStatus.PENDING
@@ -24,6 +25,11 @@ class ProjectRecord:
     artifacts: ProjectArtifacts = field(default_factory=ProjectArtifacts)
     config_overrides: dict[str, Any] = field(default_factory=dict)
     work_dir: str = ""
+
+
+def _key(project_id: str, mode: str = "video") -> str:
+    """Composite store key so anime/video projects with the same id don't clash."""
+    return f"{mode}:{project_id}"
 
 
 class TaskStore:
@@ -41,6 +47,7 @@ class TaskStore:
         overrides: dict | None = None,
         narrative_mode: NarrativeMode = "protagonist_focus",
         supporting_names: list[str] | None = None,
+        mode: str = "video",
     ) -> ProjectRecord:
         record = ProjectRecord(
             project_id=project_id,
@@ -48,22 +55,24 @@ class TaskStore:
             episode=episode,
             text=text,
             work_dir=work_dir,
+            mode=mode,
             narrative_mode=narrative_mode,
             supporting_names=supporting_names or [],
             config_overrides=overrides or {},
         )
         with self._lock:
-            self._projects[project_id] = record
+            self._projects[_key(project_id, mode)] = record
         return record
 
-    def get(self, project_id: str) -> ProjectRecord | None:
+    def get(self, project_id: str, mode: str = "video") -> ProjectRecord | None:
         with self._lock:
-            return self._projects.get(project_id)
+            return self._projects.get(_key(project_id, mode))
 
     def update(
         self,
         project_id: str,
         *,
+        mode: str = "video",
         status: ProjectStatus | None = None,
         progress: float | None = None,
         current_stage: str | None = None,
@@ -71,7 +80,7 @@ class TaskStore:
         artifacts: ProjectArtifacts | None = None,
     ) -> None:
         with self._lock:
-            rec = self._projects.get(project_id)
+            rec = self._projects.get(_key(project_id, mode))
             if not rec:
                 return
             if status is not None:
@@ -87,7 +96,7 @@ class TaskStore:
 
     def list_ids(self) -> list[str]:
         with self._lock:
-            return list(self._projects.keys())
+            return [rec.project_id for rec in self._projects.values()]
 
 
 task_store = TaskStore()

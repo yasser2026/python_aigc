@@ -7,14 +7,16 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.core.config_loader import get_root, load_config
+from app.core.paths import data_root_for_mode
+from app.core.runtime import normalize_mode
 
 _EPISODE_RE = re.compile(r"第(\d+)集$")
 
+_PORTFOLIO_MODES = ("video", "anime")
 
-def _data_root() -> Path:
-    app_cfg = load_config("app")
-    return get_root() / app_cfg.get("data_root", "data")
+
+def _data_root(mode: str = "video") -> Path:
+    return data_root_for_mode(mode)
 
 
 def _read_meta(ep_dir: Path) -> dict:
@@ -39,9 +41,8 @@ def _poster_path(ep_dir: Path) -> Path | None:
     return pngs[0] if pngs else None
 
 
-def scan_portfolio() -> list[dict]:
-    """Return portfolio items sorted by video mtime (newest first)."""
-    root = _data_root()
+def _scan_root(mode: str) -> list[dict]:
+    root = _data_root(mode)
     if not root.is_dir():
         return []
 
@@ -72,6 +73,7 @@ def scan_portfolio() -> list[dict]:
                     "project_id": project_id,
                     "novel_name": novel_name,
                     "episode": int(episode),
+                    "mode": normalize_mode(meta.get("mode") or mode),
                     "has_video": True,
                     "has_poster": poster is not None,
                     "video_size_bytes": stat.st_size,
@@ -80,13 +82,20 @@ def scan_portfolio() -> list[dict]:
                     ).isoformat(),
                 }
             )
+    return items
 
+
+def scan_portfolio() -> list[dict]:
+    """Return portfolio items across video + anime roots, newest first."""
+    items: list[dict] = []
+    for mode in _PORTFOLIO_MODES:
+        items.extend(_scan_root(mode))
     items.sort(key=lambda x: x["finished_at"], reverse=True)
     return items
 
 
-def resolve_poster(project_id: str) -> Path | None:
-    path = _data_root() / project_id.replace("\\", "/")
+def resolve_poster(project_id: str, mode: str = "video") -> Path | None:
+    path = _data_root(normalize_mode(mode)) / project_id.replace("\\", "/")
     if not path.is_dir():
         return None
     return _poster_path(path)

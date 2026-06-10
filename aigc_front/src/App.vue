@@ -1,9 +1,8 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 import {
   createProject,
   downloadUrl,
-  fetchHealth,
   fetchNovelMeta,
   fetchPortfolio,
   getProject,
@@ -37,21 +36,43 @@ const progress = ref(0);
 const currentStage = ref("");
 const error = ref("");
 const generating = ref(false);
-const backendOk = ref(true);
+const genMode = ref("video");
 const videoUrl = ref("");
 const activeView = ref("chat");
 const portfolioItems = ref([]);
 const portfolioLoading = ref(false);
 const portfolioError = ref("");
 const selectedWork = ref(null);
+const alertDialog = ref({
+  visible: false,
+  title: "",
+  message: "",
+  items: [],
+});
 
-const canSubmit = computed(
-  () =>
-    !generating.value &&
-    novelName.value.trim() &&
-    episode.value >= 1 &&
-    plot.value.trim()
-);
+function collectMissingRequired() {
+  const missing = [];
+  if (!novelName.value.trim()) missing.push("短剧名称");
+  if (!(Number(episode.value) >= 1)) missing.push("集数");
+  if (!plot.value.trim()) missing.push("剧情正文");
+  return missing;
+}
+
+function showAlertDialog({ title, message = "", items = [] }) {
+  alertDialog.value = { visible: true, title, message, items };
+}
+
+function closeAlertDialog() {
+  alertDialog.value.visible = false;
+}
+
+function promptMissingRequired(missing) {
+  showAlertDialog({
+    title: "请完善必填信息",
+    message: "以下项目尚未填写，补充后再生成：",
+    items: missing,
+  });
+}
 
 /** 单行输入：去首尾空白，连续空格合并为一个 */
 function normalizeLineField(value) {
@@ -132,18 +153,18 @@ function formatUserPrompt() {
   return `《${novelName.value.trim()}》 第 ${episode.value} 集\n\n${plot.value.trim()}`;
 }
 
-async function pollUntilDone(id) {
+async function pollUntilDone(id, mode = "video") {
   const maxMs = 30 * 60 * 1000;
   const start = Date.now();
   while (Date.now() - start < maxMs) {
-    const data = await getProject(id);
+    const data = await getProject(id, mode);
     status.value = data.status;
     progress.value = data.progress;
     currentStage.value = data.current_stage || data.status;
     error.value = data.error || "";
 
     if (data.status === "done") {
-      videoUrl.value = downloadUrl(id) + "?t=" + Date.now();
+      videoUrl.value = downloadUrl(id, mode) + "&t=" + Date.now();
       return data;
     }
     if (data.status === "failed") {
@@ -174,10 +195,23 @@ async function loadNovelProtagonist() {
   }
 }
 
-async function handleGenerate() {
-  normalizeAllInputs();
-  if (!canSubmit.value) return;
+async function handleGenerate(mode = "video") {
+  if (generating.value) {
+    showAlertDialog({
+      title: "请稍候",
+      message: "当前任务正在生成中，完成后再试。",
+    });
+    return;
+  }
 
+  normalizeAllInputs();
+  const missing = collectMissingRequired();
+  if (missing.length) {
+    promptMissingRequired(missing);
+    return;
+  }
+
+  genMode.value = mode;
   generating.value = true;
   videoUrl.value = "";
   error.value = "";
@@ -187,11 +221,18 @@ async function handleGenerate() {
   const prompt = formatUserPrompt();
   addMessage("user", prompt);
 
+  const kindLabel = mode === "anime" ? "动画" : "短视频";
+  const stageHint =
+    mode === "anime"
+      ? "分镜 → 生图 → 多角色配音 → I2V/口型动画 → 合成"
+      : "分镜 → 生图 → 配音 → 合成";
+
   try {
     const created = await createProject({
       novel_name: novelName.value.trim(),
       episode: Number(episode.value),
       text: plot.value.trim(),
+      mode,
       narrative_mode: narrativeMode.value,
       protagonist_name: protagonistName.value.trim() || undefined,
       supporting_names: supportingNames.value.trim() || undefined,
@@ -200,7 +241,7 @@ async function handleGenerate() {
     projectId.value = created.project_id;
     addMessage(
       "assistant",
-      `正在为你生成《${created.novel_name}》第 ${created.episode} 集短视频，预计需要数分钟，请稍候…\n\n当前阶段会依次进行：分镜 → 生图 → 配音 → 合成。`,
+      `正在为你生成《${created.novel_name}》第 ${created.episode} 集${kindLabel}，预计需要数分钟，请稍候…\n\n当前阶段会依次进行：${stageHint}。`,
       { loading: true }
     );
 
@@ -208,15 +249,16 @@ async function handleGenerate() {
       id: created.project_id,
       novel_name: created.novel_name,
       episode: created.episode,
+      mode,
       time: new Date().toISOString(),
     });
 
-    await pollUntilDone(created.project_id);
+    await pollUntilDone(created.project_id, mode);
 
     const last = messages.value[messages.value.length - 1];
     if (last?.loading) last.loading = false;
 
-    addMessage("assistant", "你的视频生成好啦。", {
+    addMessage("assistant", `你的${kindLabel}生成好啦。`, {
       video: true,
       downloadName: `${created.novel_name}_第${String(created.episode).padStart(2, "0")}集.mp4`,
     });
@@ -232,6 +274,7 @@ async function handleGenerate() {
 }
 
 function loadFromHistory(item) {
+  activeView.value = "chat";
   novelName.value = item.novel_name;
   episode.value = item.episode;
   projectId.value = item.id;
@@ -294,19 +337,13 @@ function closeWorkDetail() {
   selectedWork.value = null;
 }
 
-function workVideoUrl(projectId) {
-  return downloadUrl(projectId) + "?t=" + Date.now();
+function workVideoUrl(projectId, mode = "video") {
+  return downloadUrl(projectId, mode) + "&t=" + Date.now();
 }
 
-onMounted(async () => {
+onMounted(() => {
   loadHistory();
-  try {
-    await fetchHealth();
-    backendOk.value = true;
-    await loadPortfolio();
-  } catch {
-    backendOk.value = false;
-  }
+  loadPortfolio();
 });
 </script>
 
@@ -349,10 +386,6 @@ onMounted(async () => {
         </li>
       </ul>
 
-      <div class="sidebar-foot">
-        <span :class="['dot', backendOk ? 'ok' : 'err']"></span>
-        {{ backendOk ? "后端已连接" : "后端未连接" }}
-      </div>
     </aside>
 
     <main class="main">
@@ -385,12 +418,13 @@ onMounted(async () => {
             <div class="work-cover">
               <img
                 v-if="item.has_poster"
-                :src="posterUrl(item.project_id)"
+                :src="posterUrl(item.project_id, item.mode)"
                 :alt="item.novel_name"
                 loading="lazy"
               />
               <span v-else class="work-cover-placeholder">🎬</span>
               <span class="work-badge">第 {{ item.episode }} 集</span>
+              <span class="work-mode-badge">{{ item.mode === "anime" ? "动画" : "视频" }}</span>
             </div>
             <div class="work-info">
               <h3>{{ item.novel_name }}</h3>
@@ -410,19 +444,22 @@ onMounted(async () => {
             <button type="button" class="work-detail-close" @click="closeWorkDetail">
               ✕
             </button>
-            <h2>{{ selectedWork.novel_name }} · 第 {{ selectedWork.episode }} 集</h2>
+            <h2>
+              {{ selectedWork.novel_name }} · 第 {{ selectedWork.episode }} 集
+              <span class="work-mode-badge">{{ selectedWork.mode === "anime" ? "动画" : "视频" }}</span>
+            </h2>
             <video
               :key="selectedWork.project_id"
-              :src="workVideoUrl(selectedWork.project_id)"
+              :src="workVideoUrl(selectedWork.project_id, selectedWork.mode)"
               controls
               class="work-detail-player"
             />
             <a
               class="btn-download"
-              :href="downloadUrl(selectedWork.project_id)"
+              :href="downloadUrl(selectedWork.project_id, selectedWork.mode)"
               :download="`${selectedWork.novel_name}_第${String(selectedWork.episode).padStart(2, '0')}集.mp4`"
             >
-              ↓ 下载视频
+              ↓ 下载{{ selectedWork.mode === "anime" ? "动画" : "视频" }}
             </a>
           </div>
         </div>
@@ -543,19 +580,53 @@ onMounted(async () => {
               手绘动漫 · 竖屏 9:16
               <template v-if="protagonistLocked"> · 主角已锁定</template>
             </span>
-            <button
-              class="btn-send"
-              type="button"
-              :disabled="!canSubmit"
-              @click="handleGenerate"
-            >
-              {{ generating ? "生成中…" : "生成视频" }}
-            </button>
+            <div class="composer-buttons">
+              <button
+                class="btn-send btn-secondary"
+                type="button"
+                :disabled="generating"
+                @click="handleGenerate('video')"
+              >
+                {{ generating && genMode === "video" ? "生成中…" : "生成视频" }}
+              </button>
+              <button
+                class="btn-send"
+                type="button"
+                :disabled="generating"
+                @click="handleGenerate('anime')"
+              >
+                {{ generating && genMode === "anime" ? "生成中…" : "生成动画" }}
+              </button>
+            </div>
+            <p v-if="error && !generating" class="composer-error">{{ error }}</p>
           </div>
         </div>
       </div>
       </template>
     </main>
+
+    <Transition name="alert-fade">
+      <div
+        v-if="alertDialog.visible"
+        class="alert-dialog"
+        @keydown.esc="closeAlertDialog"
+      >
+        <div class="alert-dialog-backdrop" @click="closeAlertDialog" />
+        <div class="alert-dialog-panel" role="alertdialog" aria-modal="true">
+          <div class="alert-dialog-icon">!</div>
+          <h3 class="alert-dialog-title">{{ alertDialog.title }}</h3>
+          <p v-if="alertDialog.message" class="alert-dialog-message">
+            {{ alertDialog.message }}
+          </p>
+          <ul v-if="alertDialog.items.length" class="alert-dialog-list">
+            <li v-for="item in alertDialog.items" :key="item">{{ item }}</li>
+          </ul>
+          <button type="button" class="alert-dialog-btn" @click="closeAlertDialog">
+            知道了
+          </button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -803,6 +874,23 @@ onMounted(async () => {
   color: #fff;
   padding: 3px 8px;
   border-radius: 6px;
+}
+
+.work-mode-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #7c5cff, #4f8cff);
+  color: #fff;
+  vertical-align: middle;
+}
+
+.work-cover .work-mode-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
 }
 
 .work-info {
@@ -1097,6 +1185,11 @@ select:focus {
   color: var(--muted);
 }
 
+.hint-warn {
+  color: #e0843b;
+  font-weight: 600;
+}
+
 .btn-send {
   padding: 10px 28px;
   border: none;
@@ -1114,5 +1207,147 @@ select:focus {
 .btn-send:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.composer-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.composer-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #e0843b;
+  text-align: right;
+}
+
+.btn-send.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.btn-send.btn-secondary:hover:not(:disabled) {
+  background: rgba(124, 92, 255, 0.08);
+}
+
+.alert-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.alert-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.alert-dialog-panel {
+  position: relative;
+  z-index: 1;
+  width: min(360px, 100%);
+  padding: 28px 24px 22px;
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
+  text-align: center;
+}
+
+.alert-dialog-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff4e6, #ffe8cc);
+  color: #e0843b;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 48px;
+}
+
+.alert-dialog-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.alert-dialog-message {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.alert-dialog-list {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  list-style: none;
+  text-align: left;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.alert-dialog-list li {
+  position: relative;
+  padding: 6px 0 6px 18px;
+  font-size: 14px;
+  color: #334155;
+}
+
+.alert-dialog-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: translateY(-50%);
+}
+
+.alert-dialog-btn {
+  min-width: 120px;
+  padding: 10px 28px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.alert-dialog-btn:hover {
+  background: var(--primary-hover);
+}
+
+.alert-fade-enter-active,
+.alert-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.alert-fade-enter-active .alert-dialog-panel,
+.alert-fade-leave-active .alert-dialog-panel {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.alert-fade-enter-from,
+.alert-fade-leave-to {
+  opacity: 0;
+}
+
+.alert-fade-enter-from .alert-dialog-panel,
+.alert-fade-leave-to .alert-dialog-panel {
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
 }
 </style>

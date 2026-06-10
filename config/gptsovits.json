@@ -1,0 +1,14 @@
+{
+  "host": "${GPTSOVITS_HOST}",
+  "tts_endpoint": "/tts",
+  "request_timeout_sec": 120,
+  "text_lang": "zh",
+  "prompt_lang": "zh",
+  "media_type": "wav",
+  "top_k": 5,
+  "top_p": 1.0,
+  "temperature": 1.0,
+  "speed_factor": 1.0,
+  "batch_size": 1,
+  "streaming_mode": false
+}

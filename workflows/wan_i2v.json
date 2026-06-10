@@ -1,0 +1,19 @@
+{
+  "_comment": "Placeholder ComfyUI workflow for Wan2.1 image-to-video (I2V). Export your Wan I2V workflow from ComfyUI in API format and replace this file. Update input_mappings in config/wan_i2v.json so node ids match: image (LoadImage), positive/negative prompt, num_frames/width/height (sampler/length node), and the SaveVideo/VHS output node. The client reads the first video output (mp4/webm) from /history.",
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "scene.png" }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "positive prompt placeholder" }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "negative prompt placeholder" }
+  },
+  "10": {
+    "class_type": "WanI2VLength",
+    "inputs": { "length": 81, "width": 480, "height": 854 }
+  }
+}

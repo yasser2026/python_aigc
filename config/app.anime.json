@@ -1,0 +1,13 @@
+{
+  "host": "0.0.0.0",
+  "port": 8091,
+  "data_root": "data_anime",
+  "max_concurrent_projects": 1,
+  "config_dir": "config",
+  "image_provider": "comfyui",
+  "mock_image": {
+    "font_path": "C:/Windows/Fonts/msyh.ttc",
+    "title_font_size": 40,
+    "body_font_size": 56
+  }
+}

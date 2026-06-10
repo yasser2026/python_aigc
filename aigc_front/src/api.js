@@ -13,6 +13,16 @@ export async function fetchHealth() {
   return res.json();
 }
 
+export async function fetchAnimeHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/anime/health`);
+    if (!res.ok) return { available: false };
+    return res.json();
+  } catch {
+    return { available: false };
+  }
+}
+
 export async function fetchNovelMeta(novelName) {
   const name = encodeURIComponent(novelName.trim());
   if (!name) return null;
@@ -25,6 +35,7 @@ export async function createProject({
   novel_name,
   episode,
   text,
+  mode,
   narrative_mode,
   protagonist_name,
   supporting_names,
@@ -36,6 +47,7 @@ export async function createProject({
       novel_name,
       episode,
       text,
+      mode: mode || "video",
       narrative_mode: narrative_mode || "protagonist_focus",
       protagonist_name: protagonist_name?.trim() || null,
       supporting_names: supporting_names?.trim() || null,
@@ -48,20 +60,20 @@ export async function createProject({
   return res.json();
 }
 
-export async function getProject(projectId) {
+export async function getProject(projectId, mode = "video") {
   const res = await fetch(
-    `${API_BASE}/projects/${encodeProjectId(projectId)}`
+    `${API_BASE}/projects/${encodeProjectId(projectId)}?mode=${mode}`
   );
   if (!res.ok) throw new Error("查询任务失败");
   return res.json();
 }
 
-export function downloadUrl(projectId) {
-  return `${API_BASE}/projects/${encodeProjectId(projectId)}/download`;
+export function downloadUrl(projectId, mode = "video") {
+  return `${API_BASE}/projects/${encodeProjectId(projectId)}/download?mode=${mode}`;
 }
 
-export function posterUrl(projectId) {
-  return `${API_BASE}/portfolio/${encodeProjectId(projectId)}/poster`;
+export function posterUrl(projectId, mode = "video") {
+  return `${API_BASE}/portfolio/${encodeProjectId(projectId)}/poster?mode=${mode}`;
 }
 
 export async function fetchPortfolio() {

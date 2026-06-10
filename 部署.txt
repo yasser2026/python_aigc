@@ -21,8 +21,8 @@
    git clone <你的仓库地址> python_agic
    cd python_agic
 
-3. Python 虚拟环境
-   python3 -m venv .venv
+3. Python 虚拟环境（需 Python 3.9+，推荐 3.11）
+   python3.11 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
 

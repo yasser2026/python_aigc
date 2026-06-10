@@ -1,0 +1,54 @@
+{
+  "max_scenes_per_chapter": 12,
+  "scene_duration_sec": 4,
+  "aspect_ratio": "9:16",
+  "character_consistency": {
+    "method": "ref_image",
+    "scope": "per_novel",
+    "reference_subdir": "characters"
+  },
+  "motion": {
+    "mode": "i2v",
+    "i2v_provider": "wan"
+  },
+  "animation": {
+    "i2v": {
+      "enabled": true,
+      "scene_types": ["environment", "crowd", "character"],
+      "max_duration_sec": 5
+    },
+    "talk": {
+      "enabled": false,
+      "scene_types": ["character"],
+      "require_audio": true,
+      "max_duration_sec": 8
+    },
+    "fallback": "ken_burns"
+  },
+  "stages": [
+    "parse_scenes",
+    "generate_images",
+    "tts",
+    "motion_clips",
+    "subtitles",
+    "assemble"
+  ],
+  "retry": {
+    "llm": 2,
+    "comfyui": 1,
+    "ffmpeg": 1,
+    "i2v": 1,
+    "talk": 1
+  },
+  "quality_filter": {
+    "enabled": false
+  },
+  "narrative_mode_default": "protagonist_focus",
+  "knowledge_graph": {
+    "enabled": true,
+    "inject_in_prompt": true
+  },
+  "cache": {
+    "enabled": true
+  }
+}

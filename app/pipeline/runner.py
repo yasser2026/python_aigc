@@ -6,10 +6,12 @@ import logging
 from pathlib import Path
 
 from app.core.config_loader import load_config
+from app.core.runtime import get_mode, set_mode
 from app.core.schemas import ProjectArtifacts, ProjectStatus, Scene
 from app.pipeline import state as pipeline_state
 from app.pipeline.task_store import task_store
 from app.services import (
+    animation_provider,
     character_refs,
     ffmpeg_assemble,
     ffmpeg_motion,
@@ -20,7 +22,7 @@ from app.services import (
     novel_meta,
     scene_normalizer,
     subtitle,
-    tts_service,
+    tts_provider,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,7 @@ def _update_stage(project_id: str, stage: str, progress: float) -> None:
     status, _ = STAGE_PROGRESS.get(stage, (ProjectStatus.PENDING, 0))
     task_store.update(
         project_id,
+        mode=get_mode(),
         status=status,
         current_stage=stage,
         progress=progress,
@@ -58,6 +61,7 @@ def _mark_done(project_id: str, work_dir: Path) -> None:
     final_path = work_dir / "output" / "final.mp4"
     task_store.update(
         project_id,
+        mode=get_mode(),
         status=ProjectStatus.DONE,
         progress=100.0,
         current_stage="done",
@@ -72,8 +76,9 @@ def _mark_done(project_id: str, work_dir: Path) -> None:
     )
 
 
-async def run_pipeline(project_id: str) -> None:
-    rec = task_store.get(project_id)
+async def run_pipeline(project_id: str, mode: str = "video") -> None:
+    set_mode(mode)
+    rec = task_store.get(project_id, mode=mode)
     if not rec:
         return
 
@@ -236,7 +241,7 @@ async def run_pipeline(project_id: str) -> None:
                     audio_path = audio_dir / f"{scene.id}.mp3"
                     char_map = {c.id: c for c in characters}
                     scene = graph_context.validate_scene_speaker(scene)
-                    dur = await tts_service.synthesize_scene(
+                    dur = await tts_provider.synthesize_scene(
                         scene,
                         audio_path,
                         char_map=char_map,
@@ -272,10 +277,23 @@ async def run_pipeline(project_id: str) -> None:
             else:
                 _update_stage(project_id, "motion_clips", 65)
                 clips_dir = work_dir / "clips"
+                anime_mode = get_mode() == "anime"
                 for i, scene in enumerate(scenes):
                     img = Path(scene.image_path or work_dir / "images" / f"{scene.id}.png")
                     dur = durations[i] if i < len(durations) else default_dur
                     dur = max(dur, default_dur * 0.5)
+
+                    if anime_mode:
+                        clip = await animation_provider.animate_scene(
+                            scene,
+                            img,
+                            clips_dir,
+                            dur,
+                            novel_name=rec.novel_name,
+                        )
+                        scene.clip_path = str(clip)
+                        clip_paths.append(clip)
+                        continue
 
                     silent_clip = clips_dir / f"{scene.id}_silent.mp4"
                     await ffmpeg_motion.image_to_clip(img, silent_clip, dur)
@@ -370,6 +388,7 @@ async def run_pipeline(project_id: str) -> None:
         logger.exception("Pipeline failed for %s", project_id)
         task_store.update(
             project_id,
+            mode=get_mode(),
             status=ProjectStatus.FAILED,
             error=str(e),
             current_stage="failed",

@@ -11,21 +11,41 @@ LOG_FILE="$ROOT/logs/aigc-api.log"
 
 mkdir -p "$(dirname "$PID_FILE")" "$(dirname "$LOG_FILE")"
 
-# 自动选择 Python 解释器
+# 自动选择 Python 解释器（要求 >= 3.9）
+MIN_PY_MAJOR=3
+MIN_PY_MINOR=9
+
+python_version_ok() {
+  "$1" -c "import sys; sys.exit(0 if sys.version_info >= ($MIN_PY_MAJOR, $MIN_PY_MINOR) else 1)" 2>/dev/null
+}
+
 pick_python() {
   if [[ -x "$ROOT/.venv/bin/python" ]]; then
-    echo "$ROOT/.venv/bin/python"
-    return
+    if python_version_ok "$ROOT/.venv/bin/python"; then
+      echo "$ROOT/.venv/bin/python"
+      return
+    fi
+    echo "错误: .venv 的 Python 版本过低 ($("$ROOT/.venv/bin/python" -V 2>&1))，需要 >= ${MIN_PY_MAJOR}.${MIN_PY_MINOR}" >&2
+    echo "请重建虚拟环境:" >&2
+    echo "  rm -rf .venv && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2
+    exit 1
   fi
-  if [[ -x "/opt/miniconda3/envs/aigc/bin/python" ]]; then
+  if [[ -x "/opt/miniconda3/envs/aigc/bin/python" ]] && python_version_ok "/opt/miniconda3/envs/aigc/bin/python"; then
     echo "/opt/miniconda3/envs/aigc/bin/python"
     return
   fi
-  if command -v python3.11 &>/dev/null; then
-    command -v python3.11
-    return
-  fi
-  command -v python3
+  for py in python3.11 python3.10 python3; do
+    if command -v "$py" &>/dev/null; then
+      local bin
+      bin="$(command -v "$py")"
+      if python_version_ok "$bin"; then
+        echo "$bin"
+        return
+      fi
+    fi
+  done
+  echo "错误: 未找到 Python >= ${MIN_PY_MAJOR}.${MIN_PY_MINOR}，请先安装 python3.11" >&2
+  exit 1
 }
 
 PYTHON_BIN="$(pick_python)"

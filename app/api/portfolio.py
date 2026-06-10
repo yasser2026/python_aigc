@@ -21,8 +21,8 @@ def list_portfolio() -> PortfolioListResponse:
 
 
 @router.get("/{project_id:path}/poster")
-def get_poster(project_id: str) -> FileResponse:
-    path = resolve_poster(project_id)
+def get_poster(project_id: str, mode: str = "video") -> FileResponse:
+    path = resolve_poster(project_id, mode)
     if not path:
         raise HTTPException(status_code=404, detail="poster not found")
     return FileResponse(path, media_type="image/png")

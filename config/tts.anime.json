@@ -1,0 +1,38 @@
+{
+  "provider": "gptsovits",
+  "host": "${GPTSOVITS_HOST}",
+  "request_timeout_sec": 120,
+  "fallback_to_edge": true,
+  "narrator_voice_ref": null,
+  "narrator_voice_ref_text": null,
+  "narrator_voice": "zh-CN-YunxiNeural",
+  "rate": "+0%",
+  "volume": "+0%",
+  "skip_existing_audio": true,
+  "loudnorm": true,
+  "trim_silence": true,
+  "retry": {
+    "max_attempts": 3,
+    "backoff_sec": [3, 8]
+  },
+  "gptsovits": {
+    "text_lang": "zh",
+    "prompt_lang": "zh",
+    "default_prompt_text": "",
+    "top_k": 5,
+    "top_p": 1.0,
+    "temperature": 1.0,
+    "speed_factor": 1.0
+  },
+  "voice_by_profile": {
+    "male_adult": "zh-CN-YunxiNeural",
+    "female_adult": "zh-CN-XiaoxiaoNeural",
+    "female_child": "zh-CN-XiaoyiNeural",
+    "unknown_unknown": "zh-CN-YunxiNeural"
+  },
+  "voice_map": {},
+  "voice_fallback_chain": [
+    "zh-CN-YunxiNeural",
+    "zh-CN-XiaoxiaoNeural"
+  ]
+}

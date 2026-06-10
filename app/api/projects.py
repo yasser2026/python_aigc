@@ -8,19 +8,22 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
 
-from app.core.config_loader import get_root, load_config
+from app.core.config_loader import load_config
+from app.core.runtime import normalize_mode, set_mode
 from app.core.schemas import (
+    AnimeHealthResponse,
     CreateProjectRequest,
     CreateProjectResponse,
     HealthResponse,
+    ProjectArtifacts,
     ProjectDetailResponse,
     ProjectStatus,
 )
-from app.core.paths import build_project_id, build_work_dir
+from app.core.paths import build_project_id, build_work_dir, data_root_for_mode
 from app.pipeline.runner import run_pipeline
 from app.pipeline import state as pipeline_state
 from app.pipeline.task_store import task_store
-from app.services import comfyui_client, ffmpeg_motion, knowledge_graph, novel_meta
+from app.services import anime_health, comfyui_client, ffmpeg_motion, knowledge_graph, novel_meta
 from app.services.image_provider import get_image_provider
 from app.services import vector_store
 
@@ -28,10 +31,9 @@ router = APIRouter()
 health_router = APIRouter()
 
 
-def _output_video_on_disk(project_id: str) -> Path | None:
+def _output_video_on_disk(project_id: str, mode: str = "video") -> Path | None:
     """Fallback when task_store is empty but pipeline already wrote final.mp4."""
-    app_cfg = load_config("app")
-    path = get_root() / app_cfg.get("data_root", "data") / project_id / "output" / "final.mp4"
+    path = data_root_for_mode(mode) / project_id / "output" / "final.mp4"
     return path if path.is_file() else None
 
 
@@ -64,11 +66,18 @@ async def health() -> HealthResponse:
     )
 
 
+@health_router.get("/anime/health", response_model=AnimeHealthResponse)
+async def anime_health_check() -> AnimeHealthResponse:
+    result = await anime_health.check_anime_services()
+    return AnimeHealthResponse(**result)
+
+
 @router.post("", response_model=CreateProjectResponse)
 async def create_project(
     body: CreateProjectRequest,
     background_tasks: BackgroundTasks,
 ) -> CreateProjectResponse:
+    mode = set_mode(body.mode)
     project_id = build_project_id(body.novel_name, body.episode)
     work_dir = build_work_dir(body.novel_name, body.episode)
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -95,11 +104,13 @@ async def create_project(
         overrides=body.config_overrides,
         narrative_mode=body.narrative_mode,
         supporting_names=supporting_names,
+        mode=mode,
     )
     meta_payload = {
         "novel_name": body.novel_name,
         "episode": body.episode,
         "project_id": project_id,
+        "mode": mode,
         "narrative_mode": body.narrative_mode,
     }
     if body.protagonist_name and body.protagonist_name.strip():
@@ -142,6 +153,7 @@ async def create_project(
     if already_done:
         task_store.update(
             record.project_id,
+            mode=mode,
             status=ProjectStatus.DONE,
             progress=100.0,
             current_stage="done",
@@ -160,9 +172,10 @@ async def create_project(
             episode=record.episode,
             work_dir=record.work_dir,
             status=ProjectStatus.DONE,
+            mode=mode,
         )
 
-    background_tasks.add_task(_run_async, record.project_id)
+    background_tasks.add_task(_run_async, record.project_id, mode)
 
     return CreateProjectResponse(
         project_id=record.project_id,
@@ -170,11 +183,12 @@ async def create_project(
         episode=record.episode,
         work_dir=record.work_dir,
         status=ProjectStatus.PENDING,
+        mode=mode,
     )
 
 
-async def _run_async(project_id: str) -> None:
-    await run_pipeline(project_id)
+async def _run_async(project_id: str, mode: str = "video") -> None:
+    await run_pipeline(project_id, mode)
 
 
 @router.get("")
@@ -184,9 +198,10 @@ def list_projects() -> dict:
 
 
 @router.get("/{project_id:path}/download")
-def download_project(project_id: str) -> FileResponse:
-    rec = task_store.get(project_id)
-    disk_path = _output_video_on_disk(project_id)
+def download_project(project_id: str, mode: str = "video") -> FileResponse:
+    mode = set_mode(mode)
+    rec = task_store.get(project_id, mode=mode)
+    disk_path = _output_video_on_disk(project_id, mode)
 
     if rec:
         if rec.status != ProjectStatus.DONE:
@@ -224,8 +239,9 @@ def download_project(project_id: str) -> FileResponse:
 
 
 @router.get("/{project_id:path}", response_model=ProjectDetailResponse)
-def get_project(project_id: str) -> ProjectDetailResponse:
-    rec = task_store.get(project_id)
+def get_project(project_id: str, mode: str = "video") -> ProjectDetailResponse:
+    mode = normalize_mode(mode)
+    rec = task_store.get(project_id, mode=mode)
     if not rec:
         raise HTTPException(status_code=404, detail="project not found")
     return ProjectDetailResponse(
@@ -234,6 +250,7 @@ def get_project(project_id: str) -> ProjectDetailResponse:
         episode=rec.episode,
         work_dir=rec.work_dir,
         status=rec.status,
+        mode=rec.mode,
         progress=rec.progress,
         current_stage=rec.current_stage,
         error=rec.error,

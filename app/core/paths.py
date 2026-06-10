@@ -6,8 +6,23 @@ import re
 from pathlib import Path
 
 from app.core.config_loader import get_root, load_config
+from app.core.runtime import get_mode
 
 _INVALID_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+_DEFAULT_DATA_ROOT = {"video": "data", "anime": "data_anime"}
+
+
+def data_root_for_mode(mode: str | None = None) -> Path:
+    """Absolute data root for a mode.
+
+    Each mode's app config (app.json / app.anime.json) declares its own
+    ``data_root``; falls back to sane per-mode defaults.
+    """
+    resolved = mode or get_mode()
+    app_cfg = load_config("app", mode=resolved)
+    default = _DEFAULT_DATA_ROOT.get(resolved, "data")
+    return get_root() / app_cfg.get("data_root", default)
 
 
 def sanitize_novel_dir(name: str) -> str:
@@ -27,15 +42,13 @@ def build_project_id(novel_name: str, episode: int) -> str:
 
 
 def build_work_dir(novel_name: str, episode: int) -> Path:
-    app_cfg = load_config("app")
     rel = build_project_id(novel_name, episode)
-    return get_root() / app_cfg.get("data_root", "data") / rel
+    return data_root_for_mode() / rel
 
 
 def build_novel_dir(novel_name: str) -> Path:
-    """data/{小说名}/ — shared assets across episodes."""
-    app_cfg = load_config("app")
-    return get_root() / app_cfg.get("data_root", "data") / sanitize_novel_dir(novel_name)
+    """{data_root}/{小说名}/ — shared assets across episodes (per mode)."""
+    return data_root_for_mode() / sanitize_novel_dir(novel_name)
 
 
 def to_storage_path(path: Path | str | None) -> str | None:
@@ -90,6 +103,11 @@ def character_variant_ref_path(
     if variant_id == "default":
         return base / "ref.png"
     return base / "variants" / variant_id / "ref.png"
+
+
+def character_voice_ref_path(novel_name: str, character_id: str) -> Path:
+    """{data_root}/{小说名}/characters/{char_id}/voice_ref.wav — TTS clone source."""
+    return build_novel_dir(novel_name) / "characters" / character_id / "voice_ref.wav"
 
 
 def novel_characters_registry_path(novel_name: str) -> Path:

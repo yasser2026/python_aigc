@@ -8,9 +8,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+import hashlib
+
 import httpx
 
-from app.core.config_loader import load_config
+from app.core.config_loader import get_root, load_config
 from app.core.paths import character_ref_path, to_storage_path
 from app.services import character_refs, graph_context
 from app.services.mock_image import create_mock_image as render_mock_image
@@ -140,6 +142,16 @@ async def generate_scene_image(
         ref_path = mappings.get("reference_image")
         if ref_path:
             _set_nested(workflow, [str(ref_path[0])] + ref_path[1:], ref_name)
+
+    seed_path = mappings.get("seed")
+    if seed_path and cfg.get("fixed_seed_per_character"):
+        seed_key = None
+        if not env_scene and scene.character_ids:
+            seed_key = scene.character_ids[0]
+        if not seed_key:
+            seed_key = scene.location_id or scene.id
+        seed = int(hashlib.sha256(str(seed_key).encode("utf-8")).hexdigest(), 16) % (2**31)
+        _set_nested(workflow, [str(seed_path[0])] + seed_path[1:], seed)
 
     client_id = "novel_video"
     async with httpx.AsyncClient(timeout=60.0) as client:

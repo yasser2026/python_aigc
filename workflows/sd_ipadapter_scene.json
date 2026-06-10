@@ -1,0 +1,19 @@
+{
+  "_comment": "Placeholder ComfyUI workflow for Stable Diffusion / Flux + IP-Adapter scene image generation (anime mode). Export your SD + IP-Adapter (or InstantID) workflow from ComfyUI in API format and replace this file. Update input_mappings in config/comfyui.anime.json so node ids match: positive_prompt, negative_prompt, reference_image (IP-Adapter image loader), and seed (KSampler). The client uploads the character ref image for IP-Adapter and reads the first image output from /history.",
+  "3": {
+    "class_type": "KSampler",
+    "inputs": { "seed": 0, "steps": 30, "cfg": 7 }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "positive prompt placeholder" }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "negative prompt placeholder" }
+  },
+  "15": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "ref.png" }
+  }
+}

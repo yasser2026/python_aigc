@@ -1,0 +1,351 @@
+# AutoDL GPU 端部署 — 生成动画 + 多角色声音
+#
+# 适用：2×RTX 4090（24G）或同等 2×24G 双卡机器
+# 编排服务（FastAPI :8091）跑在本机 Windows / 云 CPU，AutoDL 只跑 GPU 推理
+#
+# 架构：
+#   本机 8091（python run.py）
+#     ├─ COMFYUI_ANIME_HOST  → AutoDL GPU0 :8188  出图 + Wan I2V
+#     └─ GPTSOVITS_HOST      → AutoDL GPU1 :9880  多角色声纹克隆
+#
+# 双卡分工（推荐）：
+#   GPU0 → ComfyUI（显存占用大，动画/出图串行换工作流）
+#   GPU1 → GPT-SoVITS 常驻（TTS 与出图可并行，对白多的集更快）
+
+================================================================================
+零、租机与镜像
+================================================================================
+
+1. 实例
+   - GPU：2 × RTX 4090 24G（或 2×24G）
+   - 数据盘：50G 可跑 1.3B + 出图 + TTS（无对口型）；要 14B 角色镜建议 80～100G
+   - 镜像：PyTorch 2.4/2.5 + Python 3.10/3.11 + CUDA 12.x
+
+2. 开机后检查
+   nvidia-smi
+   # 应看到 2 张卡，驱动/CUDA 正常
+
+3. 目录约定（AutoDL 上）
+mkdir  /root/autodl-tmp/comfyui
+mkdir  /root/autodl-tmp/models  
+mkdir /root/autodl-tmp/gpt-sovits
+mkdir  /root/autodl-tmp/voice_refs
+
+   /root/autodl-tmp/comfyui      # ComfyUI 主程序
+   /root/autodl-tmp/models       # 大模型放数据盘（软链到 ComfyUI）
+   /root/autodl-tmp/gpt-sovits   # GPT-SoVITS
+   /root/autodl-tmp/voice_refs   # 各角色参考音（与本机 data_anime 同步）
+
+================================================================================
+一、ComfyUI（GPU0，端口 8188）
+================================================================================
+
+1. 安装
+   cd /root/autodl-tmp
+   git clone https://github.com/comfyanonymous/ComfyUI.git comfyui
+   cd comfyui
+   pip install -r requirements.txt
+
+2. 自定义节点（按实际工作流需要安装，至少）
+   cd custom_nodes
+   git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git
+   # Wan2.1 I2V 按所选 ComfyUI 节点仓库文档安装
+   # （社区镜像若已带 Wan 节点可跳过；本方案不含 InfiniteTalk 对口型）
+cd /root/autodl-tmp/comfyui/custom_nodes/ComfyUI_IPAdapter_plus
+pip install -r requirements.txt   # 若文件存在
+/*
+python -c "import torch; print(torch.__version__)"
+# 应显示 2.5.1+cu124
+
+pip uninstall torchaudio -y
+pip install torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+*/
+# 先停掉旧进程，再启动
+cd /root/autodl-tmp/comfyui
+CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
+
+
+3. 模型目录（建议软链到数据盘）
+   # ① 在数据盘建模型目录
+   cd /root/autodl-tmp/comfyui
+   mkdir -p /root/autodl-tmp/models/{checkpoints,clip,vae,controlnet,ipadapter,loras,wan}
+
+   # ② 进入 ComfyUI 再建软链（必须在 comfyui 目录下执行，否则会报 No such file or directory）
+   cd /root/autodl-tmp/comfyui
+   mkdir -p models
+   ln -sf /root/autodl-tmp/models/checkpoints  models/checkpoints
+   ln -sf /root/autodl-tmp/models/clip         models/clip
+   ln -sf /root/autodl-tmp/models/vae          models/vae
+   ln -sf /root/autodl-tmp/models/ipadapter    models/ipadapter
+   ln -sf /root/autodl-tmp/models/wan          models/diffusion_models
+
+   # 验证（应看到 -> /root/autodl-tmp/models/...）
+   ls -la models/
+
+   查看数据盘可用容量（模型放这里，勿用 df -h / 看系统盘）：
+   df -h /root/autodl-tmp
+
+4. 需下载的模型（按 workflows/*.json 实际节点微调文件名）
+
+   原则：大文件只放到 /root/autodl-tmp/models/...（已通过软链映射到 comfyui/models/）
+
+   ── 推荐顺序 ──
+   ① 先装 Wan 的 ComfyUI 自定义节点（见下方「Wan 节点」）
+   ② 用 AutoDL 模型库 / HuggingFace 下载权重到对应目录
+   ③ 在 ComfyUI 网页搭工作流，能手动跑通后再 Export API JSON
+
+   ── 方式 A：AutoDL 模型库（最省事）──
+   控制台 → 模型库 / 社区模型，搜索并下载到数据盘，例如：
+     「SD1.5 动漫」「IP-Adapter」「Wan2.1 I2V」
+   下载完成后把文件移动到下面各目录（或挂载到 /root/autodl-tmp/models）
+
+   ── 方式 B：HuggingFace（需镜像时加 hf 镜像前缀）──
+   pip install -U huggingface_hub
+   # 示例：只下 Wan 1.3B（目录名以你装的 Wan 节点 README 为准）
+   huggingface-cli download Wan-AI/Wan2.1-I2V-1.3B --local-dir /root/autodl-tmp/models/wan/Wan2.1-I2V-1.3B
+
+   ═══════════════════════════════════════════════════════
+   4.1 出图：SD1.5 + IP-Adapter（50G 盘推荐，体积小）
+   ═══════════════════════════════════════════════════════
+
+   | 放哪 | 文件名示例 | 约大小 | 说明 |
+   |------|------------|--------|------|
+   | models/checkpoints/ | anything-v5-PrtRE.safetensors 或同类动漫 SD1.5 | ~2～4G | 任选一个动漫向 SD1.5 即可 |
+   | models/vae/ | vae-ft-mse-840000-ema-pruned.safetensors | ~0.3G | SD1.5 常用 VAE |
+   | models/clip/ 或 clip_vision/ | CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors | ~2.5G | IP-Adapter 用；若节点报找不到，改放 models/clip_vision/ |
+   | models/ipadapter/ | ip-adapter-plus_sd15.safetensors | ~0.1G | 角色参考图一致 |
+   | models/ipadapter/ | ip-adapter-plus-face_sd15.safetensors | 可选 | 更重脸部一致时可加 |
+
+   验证：ComfyUI 网页 → Add Node → 搜 IPAdapter，Load IPAdapter Model 列表里能看到权重。
+
+   若改用 SDXL：底模放 checkpoints/（~6G），IP-Adapter 换 sdxl 版，VAE 换 sdxl_vae。
+
+   ═══════════════════════════════════════════════════════
+   4.2 动画：Wan2.1 I2V
+   ═══════════════════════════════════════════════════════
+
+   Wan 节点（二选一，跟教程走）：
+     cd /root/autodl-tmp/comfyui/custom_nodes
+     git clone --depth 1 https://ghproxy.net/https://github.com/kijai/ComfyUI-WanVideoWrapper.git
+     # 或社区里带 Wan2.1 的官方/镜像节点，以该仓库 README 为准
+     cd ComfyUI-WanVideoWrapper && pip install -r requirements.txt   # 若有
+
+   权重目录：/root/autodl-tmp/models/wan/（已软链到 models/diffusion_models）
+
+   | 档位 | HuggingFace 仓库 | 约大小 | 用途 |
+   |------|------------------|--------|------|
+   | 1.3B（必装） | Wan-AI/Wan2.1-I2V-1.3B | ~8～15G | 环境/群像/默认动画，480×854 |
+   | 14B（可选） | Wan-AI/Wan2.1-I2V-14B | ~25～40G | 角色镜高清 720×1280；50G 盘可先不装 |
+
+   下载示例（1.3B）：
+     huggingface-cli download Wan-AI/Wan2.1-I2V-1.3B \
+       --local-dir /root/autodl-tmp/models/wan/Wan2.1-I2V-1.3B
+
+   验证：ComfyUI 里 Load 官方/教程 Wan I2V 工作流，选 1.3B 权重，输入一张图能出短视频。
+
+   ═══════════════════════════════════════════════════════
+   4.3 50G 盘最小套装 vs 加 14B
+   ═══════════════════════════════════════════════════════
+
+   50G 最小（先跑通）：
+     checkpoints 1 个 + vae + clip + ip-adapter-plus + Wan 1.3B  ≈ 15～25G
+     另留 GPT-SoVITS（第二节）≈ 8G，余量给日志/临时文件
+
+   要角色高清镜：再加 Wan 14B，数据盘建议扩到 80～100G
+
+   ═══════════════════════════════════════════════════════
+   4.4 下载后自检
+   ═══════════════════════════════════════════════════════
+
+   du -sh /root/autodl-tmp/models/*
+   df -h /root/autodl-tmp
+
+   # 不含 InfiniteTalk；对白镜同样走 Wan I2V + TTS 音轨，无口型驱动
+
+5. 导入本项目工作流（在本机仓库）
+   workflows/sd_ipadapter_scene.json   → ComfyUI 出图
+   workflows/wan_i2v.json              → 场景 I2V 动画（含对白镜）
+   在 ComfyUI 网页里 Load 后 Save，确认节点 id 与 config 里 input_mappings 一致；
+   若节点 id 变了，需同步改 config/comfyui.anime.json、wan_i2v.json。
+
+6. 启动（绑定 GPU0，监听所有网卡）
+   cd /root/autodl-tmp/comfyui
+   CUDA_VISIBLE_DEVICES=0 nohup python main.py --listen 0.0.0.0 --port 8188 \
+     > /root/autodl-tmp/logs/comfyui.log 2>&1 &
+
+7. 本机验证（AutoDL 容器内）
+   curl http://127.0.0.1:8188/system_stats
+
+================================================================================
+二、GPT-SoVITS（GPU1，端口 9880）
+================================================================================
+
+1. 安装（以官方 GPT-SoVITS v2 api 为例）
+   cd /root/autodl-tmp
+   git clone https://github.com/RVC-Boss/GPT-SoVITS.git gpt-sovits
+   cd gpt-sovits
+   pip install -r requirements.txt
+   # 按官方文档下载预训练权重到 GPT_SoVITS/pretrained_models
+
+2. 启动 API（绑定 GPU1）
+   cd /root/autodl-tmp/gpt-sovits
+   CUDA_VISIBLE_DEVICES=1 nohup python api_v2.py -a 0.0.0.0 -p 9880 \
+     > /root/autodl-tmp/logs/gptsovits.log 2>&1 &
+   # 若 api 入口脚本名不同，以仓库 README 为准（常见为 api.py / api_v2.py）
+
+3. 验证
+   curl http://127.0.0.1:9880/
+   # 返回非 5xx 即服务在线
+
+4. 多角色声音原理
+   - 本机 pipeline 按 scene.narration_speaker_id 选角色
+   - 每个角色需要参考音频：
+     data_anime/{小说名}/characters/{角色id}/voice_ref.wav
+   - 可选 voice_ref_text（与参考音一致的文本，克隆更准）
+
+5. 参考音同步到 AutoDL（本机与 GPU 不共享磁盘时必做）
+   在本机 config/gptsovits.json 增加（或 .env 同路径配置）：
+     "remote_ref_audio_dir": "/root/autodl-tmp/voice_refs/{小说名}/characters"
+   同步示例（本机 PowerShell / scp，替换为 AutoDL SSH 信息）：
+     scp -P <端口> data_anime/盘龙/characters/char_001/voice_ref.wav \
+       root@<autodl-ssh>:/root/autodl-tmp/voice_refs/盘龙/characters/char_001/voice_ref.wav
+   目录结构需与 character_id 一致。
+
+================================================================================
+三、AutoDL 开放端口（自定义服务）
+================================================================================
+
+在 AutoDL 控制台 → 容器实例 → 自定义服务，添加：
+
+   服务名          容器端口    说明
+   comfyui         8188        ComfyUI
+   gptsovits       9880        GPT-SoVITS
+
+记下映射后的公网地址，形如：
+   https://xxxxx-xxxxx.autodl.pro:8443   → 8188
+   https://xxxxx-xxxxx.autodl.pro:8444   → 9880
+
+（实际域名/端口以控制台显示为准）
+
+================================================================================
+四、本机 Windows 配置（python_aigc 项目根目录）
+================================================================================
+
+1. 复制环境变量
+   copy .env.example .env
+
+2. 编辑 .env（把 AutoDL 公网地址填进去，ComfyUI 相关两项可指向同一实例）
+   DASHSCOPE_API_KEY=sk-xxx          # video 模式出图仍可能需要
+   COMFYUI_ANIME_HOST=https://<autodl-公网>:<8188映射端口>
+   WAN_I2V_HOST=https://<autodl-公网>:<8188映射端口>
+   GPTSOVITS_HOST=https://<autodl-公网>:<9880映射端口>
+   # 本方案不部署 InfiniteTalk，无需配置 INFINITETALK_HOST
+
+3. 启动本机后端
+   .\.venv\Scripts\Activate.ps1
+   python run.py
+   # 默认 http://127.0.0.1:8091
+
+4. 启动前端（另开终端）
+   cd aigc_front
+   npm run dev
+   # vite 已把 /api 反代到 8091
+
+5. 生成动画
+   - 前端点「生成动画」，mode=anime
+   - 成片与中间文件落在 data_anime/（不是 data/）
+
+================================================================================
+五、流水线阶段与 GPU 占用（便于排错）
+================================================================================
+
+   阶段              调用服务              卡
+   ─────────────────────────────────────────
+   generate_images   ComfyUI 出图          GPU0
+   tts               GPT-SoVITS            GPU1
+   motion_clips      Wan I2V               GPU0
+   assemble          FFmpeg（本机 CPU）    -
+
+   所有动画镜（含对白/角色/环境/群像）→ Wan I2V；失败降级 Ken Burns
+   环境/群像镜       → Wan I2V 默认 1.3B 低清档（480×854）
+   角色镜            → Wan 可选 14B 高清档（720×1280，24G 单卡内换模型）
+   对白镜            → Wan I2V + TTS 音轨合成，无对口型（嘴型不驱动）
+
+   config/app.anime.json：max_concurrent_projects=1（单任务串行，适合 24G）
+
+================================================================================
+六、开机一键脚本（AutoDL 上，可选）
+================================================================================
+
+创建 /root/autodl-tmp/start_gpu.sh：
+
+   #!/bin/bash
+   set -e
+   mkdir -p /root/autodl-tmp/logs
+
+   # ComfyUI @ GPU0
+   cd /root/autodl-tmp/comfyui
+   CUDA_VISIBLE_DEVICES=0 nohup python main.py --listen 0.0.0.0 --port 8188 \
+     >> /root/autodl-tmp/logs/comfyui.log 2>&1 &
+   echo "ComfyUI PID $!"
+
+   # GPT-SoVITS @ GPU1
+   cd /root/autodl-tmp/gpt-sovits
+   CUDA_VISIBLE_DEVICES=1 nohup python api_v2.py -a 0.0.0.0 -p 9880 \
+     >> /root/autodl-tmp/logs/gptsovits.log 2>&1 &
+   echo "GPT-SoVITS PID $!"
+
+   sleep 3
+   curl -s http://127.0.0.1:8188/system_stats | head -c 200; echo
+   curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:9880/; echo
+
+   chmod +x /root/autodl-tmp/start_gpu.sh
+
+关机前在 AutoDL 控制台「关机」；不用时关机，按量计费。
+
+================================================================================
+七、健康检查（本机）
+================================================================================
+
+   curl http://127.0.0.1:8091/health
+   curl http://127.0.0.1:8091/anime/health
+   # anime/health 会探测 ComfyUI + Wan 等是否可达（可选，前端已不强制拦截）
+
+================================================================================
+八、常见问题
+================================================================================
+
+1. ECONNREFUSED / proxy error
+   → 本机 run.py 未启动，或 .env 里 AutoDL 地址/端口填错
+
+2. ComfyUI 有响应但生成失败
+   → 工作流节点 id 与 config input_mappings 不一致；或模型未下载完整
+
+3. 多角色声音都一样 / 变成 Edge 音色
+   → 缺少 voice_ref.wav；或 GPT-SoVITS 不可达触发 fallback_to_edge
+   → 检查 data_anime/.../voice_ref.wav 与 remote_ref_audio_dir 同步
+
+4. OOM 显存不足
+   → Wan 14B 改用 1.3B 低清档（config/wan_i2v.json default_tier: low）
+   → 确保 ComfyUI 只在 GPU0，GPT-SoVITS 只在 GPU1
+
+5. 对白镜没有口型
+   → 本方案不部署 InfiniteTalk；对白镜走 Wan I2V + TTS，属预期行为
+   → 若需对口型，需另装 InfiniteTalk 节点/权重并改 pipeline.anime.json talk.enabled
+
+6. 仅「生成视频」、不需要 GPU
+   → video 模式用 Qwen API + Edge TTS，本机 CPU 即可，无需 AutoDL
+
+================================================================================
+九、与本仓库文件的对应关系
+================================================================================
+
+   config/app.anime.json       data_root=data_anime, image_provider=comfyui
+   config/tts.anime.json       provider=gptsovits
+   config/comfyui.anime.json   COMFYUI_ANIME_HOST
+   config/wan_i2v.json         WAN_I2V_HOST
+   config/pipeline.anime.json  animation.talk.enabled=false（无对口型）
+   config/gptsovits.json       GPTSOVITS_HOST, remote_ref_audio_dir
+   workflows/*.json            需在 ComfyUI 中调试通过后使用
+
+生产环境 Nginx / 域名部署见项目根目录 部署.txt（与本文件互补：本文件只管 AutoDL GPU 端）。

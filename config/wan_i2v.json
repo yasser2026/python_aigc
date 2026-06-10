@@ -1,0 +1,24 @@
+{
+  "host": "${WAN_I2V_HOST}",
+  "workflow_path": "workflows/wan_i2v.json",
+  "mock": false,
+  "poll_interval_sec": 3,
+  "poll_timeout_sec": 900,
+  "fps": 16,
+  "resolution_tiers": {
+    "high": { "width": 720, "height": 1280, "model": "14B" },
+    "low": { "width": 480, "height": 854, "model": "1.3B" }
+  },
+  "default_tier": "low",
+  "high_tier_scene_types": ["character"],
+  "input_mappings": {
+    "image": ["1", "inputs", "image"],
+    "positive_prompt": ["6", "inputs", "text"],
+    "negative_prompt": ["7", "inputs", "text"],
+    "num_frames": ["10", "inputs", "length"],
+    "width": ["10", "inputs", "width"],
+    "height": ["10", "inputs", "height"]
+  },
+  "motion_prompt_suffix": "smooth natural motion, subtle camera movement, cinematic, gentle parallax",
+  "default_negative": "static, frozen, jitter, flicker, distortion, morphing, extra limbs, warping"
+}

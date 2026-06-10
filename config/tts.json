@@ -1,4 +1,5 @@
 {
+  "provider": "edge",
   "voice": "zh-CN-XiaoxiaoNeural",
   "narrator_voice": "zh-CN-YunxiNeural",
   "rate": "+0%",

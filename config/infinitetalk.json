@@ -1,0 +1,19 @@
+{
+  "host": "${INFINITETALK_HOST}",
+  "workflow_path": "workflows/infinitetalk.json",
+  "mock": false,
+  "poll_interval_sec": 3,
+  "poll_timeout_sec": 900,
+  "fps": 25,
+  "width": 720,
+  "height": 1280,
+  "input_mappings": {
+    "image": ["1", "inputs", "image"],
+    "audio": ["2", "inputs", "audio"],
+    "positive_prompt": ["6", "inputs", "text"],
+    "width": ["10", "inputs", "width"],
+    "height": ["10", "inputs", "height"]
+  },
+  "default_prompt": "a person talking, natural facial expression, accurate lip sync, subtle head motion",
+  "default_negative": "static mouth, no lip movement, distortion, artifacts"
+}

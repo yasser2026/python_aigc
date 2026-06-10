@@ -1,0 +1,15 @@
+{
+  "host": "${COMFYUI_ANIME_HOST}",
+  "workflow_path": "workflows/sd_ipadapter_scene.json",
+  "mock": false,
+  "poll_interval_sec": 2,
+  "poll_timeout_sec": 600,
+  "input_mappings": {
+    "positive_prompt": ["6", "inputs", "text"],
+    "negative_prompt": ["7", "inputs", "text"],
+    "reference_image": ["15", "inputs", "image"],
+    "seed": ["3", "inputs", "seed"]
+  },
+  "default_negative": "low quality, blurry, distorted, watermark, text, extra fingers, deformed hands, bad anatomy, inconsistent character, multiple faces",
+  "fixed_seed_per_character": true
+}

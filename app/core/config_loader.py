@@ -10,10 +10,12 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from app.core.runtime import get_mode, normalize_mode
+
 _ENV_PATTERN = re.compile(r"\$\{([^}]+)\}")
 
 _ROOT = Path(__file__).resolve().parents[2]
-_CONFIG_CACHE: dict[str, Any] = {}
+_CONFIG_CACHE: dict[tuple[str, str], Any] = {}
 
 
 def get_root() -> Path:
@@ -34,22 +36,34 @@ def _substitute(value: Any) -> Any:
     return value
 
 
-def load_config(name: str, *, reload: bool = False) -> dict[str, Any]:
-    """Load config/{name}.json with env substitution."""
-    if not reload and name in _CONFIG_CACHE:
-        return _CONFIG_CACHE[name]
+def load_config(name: str, *, reload: bool = False, mode: str | None = None) -> dict[str, Any]:
+    """Load config/{name}.json with env substitution.
+
+    In anime mode, prefer config/{name}.anime.json and fall back to the base
+    config/{name}.json when the mode-specific file does not exist.
+    """
+    resolved_mode = normalize_mode(mode) if mode is not None else get_mode()
+    cache_key = (name, resolved_mode)
+    if not reload and cache_key in _CONFIG_CACHE:
+        return _CONFIG_CACHE[cache_key]
 
     load_dotenv(_ROOT / ".env")
-    path = _ROOT / "config" / f"{name}.json"
+    path = config_path(name, mode=resolved_mode)
     if not path.exists():
         raise FileNotFoundError(f"Config not found: {path}")
 
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     result = _substitute(data)
-    _CONFIG_CACHE[name] = result
+    _CONFIG_CACHE[cache_key] = result
     return result
 
 
-def config_path(name: str) -> Path:
+def config_path(name: str, *, mode: str | None = None) -> Path:
+    """Resolve the config file path, preferring mode-specific overrides."""
+    resolved_mode = normalize_mode(mode) if mode is not None else get_mode()
+    if resolved_mode != "video":
+        override = _ROOT / "config" / f"{name}.{resolved_mode}.json"
+        if override.exists():
+            return override
     return _ROOT / "config" / f"{name}.json"

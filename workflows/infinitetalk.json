@@ -1,0 +1,19 @@
+{
+  "_comment": "Placeholder ComfyUI workflow for InfiniteTalk (audio-driven talking head). Export your InfiniteTalk/MultiTalk workflow from ComfyUI in API format and replace this file. Update input_mappings in config/infinitetalk.json so node ids match: image (LoadImage), audio (LoadAudio), prompt, width/height, and the video output node. The client uploads the scene image + the scene's TTS mp3, then reads the first video output from /history.",
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "scene.png" }
+  },
+  "2": {
+    "class_type": "LoadAudio",
+    "inputs": { "audio": "scene.mp3" }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "a person talking, accurate lip sync" }
+  },
+  "10": {
+    "class_type": "InfiniteTalkSize",
+    "inputs": { "width": 720, "height": 1280 }
+  }
+}

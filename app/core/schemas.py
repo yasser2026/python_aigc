@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 NarrativeMode = Literal["faithful", "protagonist_focus"]
+ProjectMode = Literal["video", "anime"]
 CharacterRole = Literal["protagonist", "supporting", "minor"]
 CharacterGender = Literal["male", "female", "unknown"]
 CharacterAgeGroup = Literal["child", "teen", "adult", "elder"]
@@ -82,6 +83,8 @@ class Character(BaseModel):
     aliases: list[str] = Field(default_factory=list)
     default_variant_id: str = "default"
     variants: dict[str, CharacterVariant] = Field(default_factory=dict)
+    voice_ref: str | None = None
+    voice_ref_text: str | None = None
 
 
 class Location(BaseModel):
@@ -121,6 +124,10 @@ class CreateProjectRequest(BaseModel):
     novel_name: str = Field(..., description="小说名称", min_length=1, max_length=200)
     episode: int = Field(..., description="第几集", ge=1, le=9999)
     text: str = Field(..., description="小说正文片段", min_length=1)
+    mode: ProjectMode = Field(
+        default="video",
+        description="生成模式：video 生成视频（默认）/ anime 生成动画（data_anime）",
+    )
     narrative_mode: NarrativeMode = Field(
         default="protagonist_focus",
         description="叙事模式：protagonist_focus 主角视角 / faithful 忠实原文",
@@ -151,6 +158,7 @@ class CreateProjectResponse(BaseModel):
     episode: int
     work_dir: str
     status: ProjectStatus
+    mode: ProjectMode = "video"
 
 
 class ProjectArtifacts(BaseModel):
@@ -166,6 +174,7 @@ class ProjectDetailResponse(BaseModel):
     episode: int
     work_dir: str
     status: ProjectStatus
+    mode: ProjectMode = "video"
     progress: float
     current_stage: str | None = None
     error: str | None = None
@@ -176,6 +185,7 @@ class PortfolioItem(BaseModel):
     project_id: str
     novel_name: str
     episode: int
+    mode: ProjectMode = "video"
     has_video: bool = True
     has_poster: bool = False
     video_size_bytes: int | None = None
@@ -197,6 +207,15 @@ class HealthResponse(BaseModel):
     vector_store_enabled: bool = False
     neo4j: bool = False
     knowledge_graph_enabled: bool = False
+
+
+class AnimeHealthResponse(BaseModel):
+    available: bool
+    comfyui: bool = False
+    wan_i2v: bool = False
+    infinitetalk: bool = False
+    gptsovits: bool = False
+    message: str | None = None
 
 
 class NovelMetaResponse(BaseModel):
