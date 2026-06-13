@@ -262,8 +262,39 @@ CUDA_VISIBLE_DEVICES=0 python main.py --listen 0.0.0.0 --port 8188
    # git 慢可本机下 ZIP 上传解压为 gpt-sovits/
    git clone https://github.com/RVC-Boss/GPT-SoVITS.git gpt-sovits
    cd gpt-sovits
-   pip install -r requirements.txt
-   pip install soundfile fastapi uvicorn ffmpeg-python   # api_v2 常缺依赖
+
+   ── 不要 pip install -r requirements.txt 一把梭（含 Gradio/日文等，易在 Py3.12 编译失败）──
+   ── 仅跑 api_v2 + 中文推理，装下面「最小集」即可；缺啥再按报错 pip install ──
+
+   mkdir -p /root/autodl-tmp/pip-cache /root/autodl-tmp/tmp
+   export PIP_CACHE_DIR=/root/autodl-tmp/pip-cache TMPDIR=/root/autodl-tmp/tmp
+
+   pip install --no-cache-dir \
+     "numpy<2.0" scipy "librosa==0.10.2" numba \
+     "pytorch-lightning>=2.4" "torchmetrics<=1.5" \
+     ffmpeg-python soundfile \
+     "transformers>=4.43,<=4.50" "peft<0.18.0" sentencepiece \
+     cn2an pypinyin jieba jieba_fast \
+     split-lang "fast_langdetect>=0.3.1" \
+     "fastapi[standard]>=0.115.2" "pydantic<=2.10.6" \
+     PyYAML psutil tqdm av onnxruntime-gpu \
+     rotary_embedding_torch x_transformers
+
+   # jieba_fast 编译失败时可试：pip install jieba_fast --only-binary=:all:
+   # 或只 pip install jieba，并把 GPT_SoVITS/text/chinese2.py 里 jieba_fast 改成 jieba
+
+   requirements.txt 对照（中文 api_v2）：
+     ✅ 必须：numpy scipy librosa numba pytorch-lightning torchmetrics
+              ffmpeg-python transformers peft sentencepiece
+              cn2an pypinyin jieba_fast jieba split-lang fast_langdetect
+              fastapi pydantic PyYAML psutil tqdm av onnxruntime-gpu
+              rotary_embedding_torch x_transformers
+     ✅ 必装但不在 requirements：soundfile
+     ❌ 可跳过：gradio tensorboard funasr pyopenjtalk g2p_en
+              ToJyutping g2pk2 ko_pron opencc python_mecab_ko
+              ctranslate2 wordsegment distance antlr4-python3-runtime
+              modelscope chardet（除非脚本用到）
+
    # 按官方文档下载预训练权重到 GPT_SoVITS/pretrained_models
 
 2. 启动 API（绑定 GPU1；单卡实例改 CUDA_VISIBLE_DEVICES=0）
