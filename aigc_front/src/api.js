@@ -31,6 +31,17 @@ export async function fetchNovelMeta(novelName) {
   return res.json();
 }
 
+export async function fetchStyles() {
+  try {
+    const res = await fetch(`${API_BASE}/styles`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.styles || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function createProject({
   novel_name,
   episode,
@@ -39,6 +50,7 @@ export async function createProject({
   narrative_mode,
   protagonist_name,
   supporting_names,
+  style,
 }) {
   const res = await fetch(`${API_BASE}/projects`, {
     method: "POST",
@@ -51,6 +63,7 @@ export async function createProject({
       narrative_mode: narrative_mode || "protagonist_focus",
       protagonist_name: protagonist_name?.trim() || null,
       supporting_names: supporting_names?.trim() || null,
+      style: style?.trim() || null,
     }),
   });
   if (!res.ok) {
@@ -74,6 +87,12 @@ export function downloadUrl(projectId, mode = "video") {
 
 export function posterUrl(projectId, mode = "video") {
   return `${API_BASE}/portfolio/${encodeProjectId(projectId)}/poster?mode=${mode}`;
+}
+
+export function coverUrl(novelName, mode = "video") {
+  return `${API_BASE}/portfolio/cover?novel=${encodeURIComponent(
+    novelName
+  )}&mode=${mode}`;
 }
 
 export async function fetchPortfolio() {

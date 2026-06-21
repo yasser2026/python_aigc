@@ -1,10 +1,12 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
+  coverUrl,
   createProject,
   downloadUrl,
   fetchNovelMeta,
   fetchPortfolio,
+  fetchStyles,
   getProject,
   posterUrl,
 } from "./api";
@@ -28,6 +30,8 @@ const protagonistName = ref("");
 const protagonistLocked = ref(false);
 const supportingNames = ref("");
 const plot = ref("");
+const styles = ref([]);
+const selectedStyle = ref("");
 const messages = ref([]);
 const history = ref([]);
 const projectId = ref(null);
@@ -48,6 +52,32 @@ const alertDialog = ref({
   title: "",
   message: "",
   items: [],
+});
+
+const currentStyleLabel = computed(() => {
+  if (!selectedStyle.value) return "默认手绘动漫";
+  const s = styles.value.find((x) => x.id === selectedStyle.value);
+  return s ? s.label : "默认手绘动漫";
+});
+
+const dramaGroups = computed(() => {
+  const groups = new Map();
+  for (const item of portfolioItems.value) {
+    const key = `${item.mode}::${item.novel_name}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        novel_name: item.novel_name,
+        mode: item.mode,
+        items: [],
+      });
+    }
+    groups.get(key).items.push(item);
+  }
+  for (const g of groups.values()) {
+    g.items.sort((a, b) => a.episode - b.episode);
+  }
+  return Array.from(groups.values());
 });
 
 function collectMissingRequired() {
@@ -236,6 +266,7 @@ async function handleGenerate(mode = "video") {
       narrative_mode: narrativeMode.value,
       protagonist_name: protagonistName.value.trim() || undefined,
       supporting_names: supportingNames.value.trim() || undefined,
+      style: mode === "anime" ? selectedStyle.value || undefined : undefined,
     });
 
     projectId.value = created.project_id;
@@ -341,9 +372,22 @@ function workVideoUrl(projectId, mode = "video") {
   return downloadUrl(projectId, mode) + "&t=" + Date.now();
 }
 
+async function loadStyles() {
+  try {
+    styles.value = await fetchStyles();
+  } catch {
+    styles.value = [];
+  }
+}
+
+function onCoverError(event) {
+  event.target.style.display = "none";
+}
+
 onMounted(() => {
   loadHistory();
   loadPortfolio();
+  loadStyles();
 });
 </script>
 
@@ -408,34 +452,62 @@ onMounted(() => {
           暂无成片。生成完成后会自动收录。
         </p>
 
-        <div v-else class="portfolio-grid">
-          <article
-            v-for="item in portfolioItems"
-            :key="item.project_id"
-            class="work-card"
-            @click="openWork(item)"
+        <div v-else class="drama-groups">
+          <section
+            v-for="group in dramaGroups"
+            :key="group.key"
+            class="drama-group"
           >
-            <div class="work-cover">
-              <img
-                v-if="item.has_poster"
-                :src="posterUrl(item.project_id, item.mode)"
-                :alt="item.novel_name"
-                loading="lazy"
-              />
-              <span v-else class="work-cover-placeholder">🎬</span>
-              <span class="work-badge">第 {{ item.episode }} 集</span>
-              <span class="work-mode-badge">{{ item.mode === "anime" ? "动画" : "视频" }}</span>
+            <header class="drama-head">
+              <div class="drama-cover">
+                <span class="drama-cover-fallback">🎬</span>
+                <img
+                  :src="coverUrl(group.novel_name, group.mode)"
+                  :alt="group.novel_name"
+                  loading="lazy"
+                  @error="onCoverError"
+                />
+              </div>
+              <div class="drama-head-info">
+                <h2>{{ group.novel_name }}</h2>
+                <p>
+                  {{ group.mode === "anime" ? "动画" : "视频" }} · 共
+                  {{ group.items.length }} 集
+                </p>
+              </div>
+            </header>
+            <div class="portfolio-grid">
+              <article
+                v-for="item in group.items"
+                :key="item.project_id"
+                class="work-card"
+                @click="openWork(item)"
+              >
+                <div class="work-cover">
+                  <img
+                    v-if="item.has_poster"
+                    :src="posterUrl(item.project_id, item.mode)"
+                    :alt="item.novel_name"
+                    loading="lazy"
+                  />
+                  <span v-else class="work-cover-placeholder">🎬</span>
+                  <span class="work-badge">第 {{ item.episode }} 集</span>
+                  <span class="work-mode-badge">{{
+                    item.mode === "anime" ? "动画" : "视频"
+                  }}</span>
+                </div>
+                <div class="work-info">
+                  <h3>第 {{ item.episode }} 集</h3>
+                  <p class="work-meta">
+                    {{ formatTime(item.finished_at) }}
+                    <span v-if="item.video_size_bytes">
+                      · {{ formatSize(item.video_size_bytes) }}
+                    </span>
+                  </p>
+                </div>
+              </article>
             </div>
-            <div class="work-info">
-              <h3>{{ item.novel_name }}</h3>
-              <p class="work-meta">
-                {{ formatTime(item.finished_at) }}
-                <span v-if="item.video_size_bytes">
-                  · {{ formatSize(item.video_size_bytes) }}
-                </span>
-              </p>
-            </div>
-          </article>
+          </section>
         </div>
 
         <div v-if="selectedWork" class="work-detail">
@@ -469,7 +541,7 @@ onMounted(() => {
       <div v-if="!messages.length" class="hero">
         <div class="hero-icon">🎬</div>
         <h1>小说转短视频</h1>
-        <p>填写短剧名称、集数与剧情，一键生成手绘动漫风格竖屏短片</p>
+        <p>填写短剧名称、集数与剧情，一键生成动漫/视频风格短片</p>
       </div>
 
       <div class="chat" ref="chatRef">
@@ -566,6 +638,17 @@ onMounted(() => {
               />
             </label>
           </div>
+          <div class="field-row">
+            <label class="supporting-field">
+              <span class="label">画风风格（动画）</span>
+              <select v-model="selectedStyle" class="mode-select">
+                <option value="">默认（手绘动漫）</option>
+                <option v-for="s in styles" :key="s.id" :value="s.id">
+                  {{ s.label }}（{{ s.suited_for }}）
+                </option>
+              </select>
+            </label>
+          </div>
           <label class="plot-field">
             <span class="label">剧情正文 <em>*</em></span>
             <textarea
@@ -577,7 +660,7 @@ onMounted(() => {
           </label>
           <div class="composer-actions">
             <span class="hint">
-              手绘动漫 · 竖屏 9:16
+              {{ currentStyleLabel }} · 横屏 16:9
               <template v-if="protagonistLocked"> · 主角已锁定</template>
             </span>
             <div class="composer-buttons">
@@ -830,6 +913,64 @@ onMounted(() => {
   gap: 16px;
 }
 
+.drama-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.drama-group {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: var(--card);
+}
+
+.drama-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.drama-cover {
+  position: relative;
+  width: 96px;
+  height: 54px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #1a1a1a;
+  flex-shrink: 0;
+}
+
+.drama-cover img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.drama-cover-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.drama-head-info h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.drama-head-info p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .work-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -846,7 +987,7 @@ onMounted(() => {
 
 .work-cover {
   position: relative;
-  aspect-ratio: 9 / 16;
+  aspect-ratio: 16 / 9;
   background: #1a1a1a;
   overflow: hidden;
 }
